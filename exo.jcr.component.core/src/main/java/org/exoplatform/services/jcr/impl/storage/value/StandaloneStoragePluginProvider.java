@@ -168,10 +168,10 @@ public class StandaloneStoragePluginProvider extends ArrayList<ValueStoragePlugi
                   props.setProperty(paramEntry.getName(), paramEntry.getValue());
                }
 
-               plugin.init(props, resorcesHolder);
                plugin.setId(storageEntry.getId());
                plugin.setRepository(repoConfig.getName());
                plugin.setWorkspace(wsConfig.getName());
+               plugin.init(props, resorcesHolder);
                plugin.setFilters(filters);
 
                add(plugin);

@@ -18,12 +18,7 @@
  */
 package org.exoplatform.services.jcr.impl.storage.value.s3;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3Client;
 
 import org.exoplatform.services.jcr.config.RepositoryConfigurationException;
 import org.exoplatform.services.jcr.impl.storage.value.ValueDataResourceHolder;
@@ -37,10 +32,12 @@ import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Properties;
+
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
 /**
  * This class is the implementation of a value storage based on Amazon S3
@@ -53,49 +50,21 @@ public class S3ValueStorage extends ValueStoragePlugin
 {
    private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.S3ValueStorage");
 
-   private final static String KEY_PREFIX = "key-prefix";
-
+   /**
+    * The name of the bucket.
+    */
    private final static String BUCKET = "bucket";
 
-   private final static String REGION = "region";
+   /**
+    * The key prefix, this is used when for the same bucket name
+    * we would like to store content of different workspace
+    */
+   private final static String KEY_PREFIX = "key-prefix";
 
-   private final static String ACCESS_KEY_ID = "access-key-id";
-
-   private final static String SECRET_KEY = "secret-access-key";
-
-   private final static String CONNECTION_TIMEOUT = "connection-timeout";
-
-   private final static String MAX_CONNECTIONS = "max-connections";
-
-   private final static String MAX_ERROR_RETRY = "max-error-retry";
-
-   private final static String SOCKET_TIMEOUT = "socket-timeout";
-
-   private final static String SOCKET_SEND_BUFFER_SIZE_HINT = "socket-send-buffer-size-hint";
-
-   private final static String SOCKET_RECEIVE_BUFFER_SIZE_HINT = "socket-receive-buffer-size-hint";
-
-   private final static String LOCAL_ADDRESS = "local-address";
-
-   private final static String PROTOCOL = "protocol";
-
-   private final static String SIGNER_OVERRIDE = "signer-override";
-
-   private final static String USER_AGENT = "user-agent";
-
-   private final static String PROXY_HOST = "proxy-host";
-
-   private final static String PROXY_PORT = "proxy-port";
-
-   private final static String PROXY_DOMAIN = "proxy-domain";
-
-   private final static String PROXY_USERNAME = "proxy-username";
-
-   private final static String PROXY_PASSWORD = "proxy-password";
-
-   private final static String PROXY_WORKSTATION = "proxy-workstation";
-
-   private final static String PREEMPTIVE_BASIC_PROXY_AUTH = "preemptive-basic-proxy-auth";
+   /**
+    * The name of the datasource to use to access to AS3
+    */
+   private final static String AS3_SOURCE_NAME = "as3-source-name";
 
    private String bucket;
 
@@ -121,9 +90,30 @@ public class S3ValueStorage extends ValueStoragePlugin
    {
       bucket = props.getProperty(BUCKET);
       String keyPrefix = props.getProperty(KEY_PREFIX);
+      setKeyPrefix(keyPrefix == null || keyPrefix.isEmpty() ? getRepository() + "/" + getWorkspace() + "/" + getId()
+         : keyPrefix);
+      String dataSourceName = props.getProperty(AS3_SOURCE_NAME);
+      try
+      {
+         InitialContext ctx = new InitialContext();
+         as3 = (AmazonS3)ctx.lookup(dataSourceName);
+      }
+      catch (NamingException e)
+      {
+         throw new RepositoryConfigurationException("Cannot access to the data source '" + dataSourceName + "'", e);
+      }
+      createBucketIfNeeded();
+      handler = new S3URLStreamHandler(as3, bucket);
+   }
+
+   /**
+    * Sets the key prefix
+    */
+   private void setKeyPrefix(String keyPrefix)
+   {
       if (keyPrefix != null)
       {
-         keyPrefix = keyPrefix.replace('\\', '/');
+         keyPrefix = escape(keyPrefix);
          while (keyPrefix.startsWith("/"))
          {
             keyPrefix = keyPrefix.substring(1);
@@ -141,30 +131,43 @@ public class S3ValueStorage extends ValueStoragePlugin
             }
          }
       }
-      String accessKeyId = props.getProperty(ACCESS_KEY_ID);
-      String secretAccessKey = props.getProperty(SECRET_KEY);
-      ClientConfiguration config = createClientConfiguration(props);
-      as3 = createAmazonS3(config, accessKeyId, secretAccessKey);
-      String region = props.getProperty(REGION);
-      if (region != null && !region.isEmpty())
-      {
-         LOG.debug("The parameter {} has been set to {}", REGION, region);
-         setRegion(region);
-      }
-      createBucketIfNeeded();
-      handler = new S3URLStreamHandler(as3, bucket);
    }
 
-   private void setRegion(String region) throws RepositoryConfigurationException
+   private String escape(String keyPrefix)
    {
-      try
+      int length = keyPrefix.length();
+      StringBuilder result = new StringBuilder(length);
+      for (int i = 0; i < length; i++)
       {
-         as3.setRegion(RegionUtils.getRegion(region));
+         char c = keyPrefix.charAt(i);
+         switch (c)
+         {
+            case '\\' :
+               result.append('/');
+               break;
+            case ' ' :
+            case '%' :
+            case ';' :
+            case ',' :
+            case '(' :
+            case ')' :
+            case '&' :
+            case '#' :
+            case '<' :
+            case '>' :
+            case ':' :
+            case '"' :
+            case '*' :
+            case '?' :
+            case '|' :
+            case '.' :
+               result.append('_');
+               break;
+            default :
+               result.append(c);
+         }
       }
-      catch (Exception e)
-      {
-         throw new RepositoryConfigurationException("Could not set the region", e);
-      }
+      return result.toString();
    }
 
    /**
@@ -183,153 +186,7 @@ public class S3ValueStorage extends ValueStoragePlugin
       {
          throw new RepositoryConfigurationException("Could not check if the bucket exists or create it", e);
       }
-      
-   }
 
-   /**
-    * Creates a new instance of {@link AmazonS3Client} and returns it. If the provided access key id and secret access
-    * key are both defined, it will be used for the authentication otherwise it will rely in the default credential
-    * provider chain
-    */
-   private AmazonS3 createAmazonS3(ClientConfiguration config, String accessKeyId, String secretAccessKey)
-      throws RepositoryConfigurationException
-   {
-      try
-      {
-         if (accessKeyId != null && !accessKeyId.isEmpty() && secretAccessKey != null && !secretAccessKey.isEmpty())
-         {
-            LOG.debug("The access key id and the secret access key have been configured so it will use it to connect to AS3");
-            return new AmazonS3Client(new BasicAWSCredentials(accessKeyId, secretAccessKey), config);
-         }
-         LOG.debug("No access key id and the secret access key have been configured so it will rely on the default credential "
-            + "provider chain to connect to AS3");
-         return new AmazonS3Client(config);
-      }
-      catch (Exception e)
-      {
-         throw new RepositoryConfigurationException("Could not instantiate the AS3 client", e);
-      }
-   }
-
-   /**
-    * Creates a new instance of {@link ClientConfiguration} according to what could be find in the provided properties
-    */
-   private ClientConfiguration createClientConfiguration(Properties props) throws RepositoryConfigurationException
-   {
-      try
-      {
-         ClientConfiguration config = new ClientConfiguration();
-         String value = props.getProperty(CONNECTION_TIMEOUT);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", CONNECTION_TIMEOUT, value);
-            config.setConnectionTimeout(Integer.valueOf(value));
-         }
-         value = props.getProperty(MAX_CONNECTIONS);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", MAX_CONNECTIONS, value);
-            config.setMaxConnections(Integer.valueOf(value));
-         }
-         value = props.getProperty(MAX_ERROR_RETRY);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", MAX_ERROR_RETRY, value);
-            config.setMaxErrorRetry(Integer.valueOf(value));
-         }
-         value = props.getProperty(SOCKET_TIMEOUT);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", SOCKET_TIMEOUT, value);
-            config.setSocketTimeout(Integer.valueOf(value));
-         }
-         value = props.getProperty(SOCKET_SEND_BUFFER_SIZE_HINT);
-         int socketSendBufferSizeHint = 0;
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", SOCKET_SEND_BUFFER_SIZE_HINT, value);
-            socketSendBufferSizeHint = Integer.valueOf(value);
-         }
-         value = props.getProperty(SOCKET_RECEIVE_BUFFER_SIZE_HINT);
-         int socketReceiveBufferSizeHint = 0;
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", SOCKET_RECEIVE_BUFFER_SIZE_HINT, value);
-            socketReceiveBufferSizeHint = Integer.valueOf(value);
-         }
-         config.setSocketBufferSizeHints(socketSendBufferSizeHint, socketReceiveBufferSizeHint);
-         value = props.getProperty(LOCAL_ADDRESS);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", LOCAL_ADDRESS, value);
-            config.setLocalAddress(InetAddress.getByName(value));
-         }
-         value = props.getProperty(PROTOCOL);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", PROTOCOL, value);
-            config.setProtocol(value.toLowerCase().equals(Protocol.HTTP.toString()) ? Protocol.HTTP : Protocol.HTTPS);
-         }
-         value = props.getProperty(SIGNER_OVERRIDE);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", SIGNER_OVERRIDE, value);
-            config.setSignerOverride(value);
-         }
-         value = props.getProperty(USER_AGENT);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", USER_AGENT, value);
-            config.setUserAgent(value);
-         }
-         value = props.getProperty(PROXY_HOST);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", PROXY_HOST, value);
-            config.setProxyHost(value);
-         }
-         value = props.getProperty(PROXY_PORT);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", PROXY_PORT, value);
-            config.setProxyPort(Integer.valueOf(value));
-         }
-         value = props.getProperty(PROXY_DOMAIN);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", PROXY_DOMAIN, value);
-            config.setProxyDomain(value);
-         }
-         value = props.getProperty(PROXY_USERNAME);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set", PROXY_USERNAME);
-            config.setProxyUsername(value);
-         }
-         value = props.getProperty(PROXY_PASSWORD);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set", PROXY_PASSWORD);
-            config.setProxyPassword(value);
-         }
-         value = props.getProperty(PROXY_WORKSTATION);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", PROXY_WORKSTATION, value);
-            config.setProxyWorkstation(value);
-         }
-         value = props.getProperty(PREEMPTIVE_BASIC_PROXY_AUTH);
-         if (value != null && !value.isEmpty())
-         {
-            LOG.debug("The parameter {} has been set to {}", PREEMPTIVE_BASIC_PROXY_AUTH, value);
-            config.setPreemptiveBasicProxyAuth(Boolean.valueOf(value));
-         }
-         return config;
-      }
-      catch (Exception e)
-      {
-         throw new RepositoryConfigurationException("Could not instantiate the client configuration", e);
-      }
    }
 
    /**

@@ -42,28 +42,8 @@
                      <value-storage id="ws"
                         class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
                         <properties>
-                           <property name="key-prefix" value="ws" />
                            <property name="bucket" value="${bucket}" />
-                           <property name="region" value="${region}" />
-                           <property name="access-key-id" value="${access-key-id}" />
-                           <property name="secret-access-key" value="${secret-access-key}" />
-                           <property name="connection-timeout" value="${connection-timeout}" />
-                           <property name="max-connections" value="${max-connections}" />
-                           <property name="max-error-retry" value="${max-error-retry}" />
-                           <property name="socket-timeout" value="${socket-timeout}" />
-                           <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint}" />
-                           <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint}" />
-                           <property name="local-address" value="${local-address}" />
-                           <property name="protocol" value="${protocol}" />
-                           <property name="signer-override" value="${signer-override}" />
-                           <property name="user-agent" value="${user-agent}" />
-                           <property name="proxy-host" value="${proxy-host}" />
-                           <property name="proxy-port" value="${proxy-port}" />
-                           <property name="proxy-domain" value="${proxy-domain}" />
-                           <property name="proxy-username" value="${proxy-username}" />
-                           <property name="proxy-password" value="${proxy-password}" />
-                           <property name="proxy-workstation" value="${proxy-workstation}" />
-                           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth}" />
+                           <property name="as3-source-name" value="as3" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
                         <filters>
@@ -118,31 +98,11 @@
                      <property name="swap-directory" value="target/temp/swap/ws1" />
                   </properties>
                   <value-storages>
-                     <value-storage id="ws1"
-                        class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
+                     <value-storage id="ws1" class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
                         <properties>
                            <property name="key-prefix" value="ws1" />
                            <property name="bucket" value="${bucket}" />
-                           <property name="region" value="${region}" />
-                           <property name="access-key-id" value="${access-key-id}" />
-                           <property name="secret-access-key" value="${secret-access-key}" />
-                           <property name="connection-timeout" value="${connection-timeout}" />
-                           <property name="max-connections" value="${max-connections}" />
-                           <property name="max-error-retry" value="${max-error-retry}" />
-                           <property name="socket-timeout" value="${socket-timeout}" />
-                           <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint}" />
-                           <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint}" />
-                           <property name="local-address" value="${local-address}" />
-                           <property name="protocol" value="${protocol}" />
-                           <property name="signer-override" value="${signer-override}" />
-                           <property name="user-agent" value="${user-agent}" />
-                           <property name="proxy-host" value="${proxy-host}" />
-                           <property name="proxy-port" value="${proxy-port}" />
-                           <property name="proxy-domain" value="${proxy-domain}" />
-                           <property name="proxy-username" value="${proxy-username}" />
-                           <property name="proxy-password" value="${proxy-password}" />
-                           <property name="proxy-workstation" value="${proxy-workstation}" />
-                           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth}" />
+                           <property name="as3-source-name" value="as3" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
                         <filters>
@@ -198,31 +158,10 @@
                      <property name="swap-directory" value="target/temp/swap/ws2" />
                   </properties>
                   <value-storages>
-                     <value-storage id="ws2"
-                        class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
+                     <value-storage id="ws2" class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
                         <properties>
-                           <property name="key-prefix" value="ws2" />
                            <property name="bucket" value="${bucket}" />
-                           <property name="region" value="${region}" />
-                           <property name="access-key-id" value="${access-key-id}" />
-                           <property name="secret-access-key" value="${secret-access-key}" />
-                           <property name="connection-timeout" value="${connection-timeout}" />
-                           <property name="max-connections" value="${max-connections}" />
-                           <property name="max-error-retry" value="${max-error-retry}" />
-                           <property name="socket-timeout" value="${socket-timeout}" />
-                           <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint}" />
-                           <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint}" />
-                           <property name="local-address" value="${local-address}" />
-                           <property name="protocol" value="${protocol}" />
-                           <property name="signer-override" value="${signer-override}" />
-                           <property name="user-agent" value="${user-agent}" />
-                           <property name="proxy-host" value="${proxy-host}" />
-                           <property name="proxy-port" value="${proxy-port}" />
-                           <property name="proxy-domain" value="${proxy-domain}" />
-                           <property name="proxy-username" value="${proxy-username}" />
-                           <property name="proxy-password" value="${proxy-password}" />
-                           <property name="proxy-workstation" value="${proxy-workstation}" />
-                           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth}" />
+                           <property name="as3-source-name" value="as3" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
                         <filters>
@@ -283,44 +222,22 @@
                         This storage is used to check whether properties are removed correctly from each value-storage
                         (TestRemoveFromValueStorage.java)
                      -->
-                     <value-storage id="ws3_big"
-                        class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
+                     <value-storage id="ws3_big" class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
                         <properties>
                            <property name="key-prefix" value="ws3_big" />
                            <property name="bucket" value="${bucket}" />
-                           <property name="region" value="${region}" />
-                           <property name="access-key-id" value="${access-key-id}" />
-                           <property name="secret-access-key" value="${secret-access-key}" />
-                           <property name="connection-timeout" value="${connection-timeout}" />
-                           <property name="max-connections" value="${max-connections}" />
-                           <property name="max-error-retry" value="${max-error-retry}" />
-                           <property name="socket-timeout" value="${socket-timeout}" />
-                           <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint}" />
-                           <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint}" />
-                           <property name="local-address" value="${local-address}" />
-                           <property name="protocol" value="${protocol}" />
-                           <property name="signer-override" value="${signer-override}" />
-                           <property name="user-agent" value="${user-agent}" />
-                           <property name="proxy-host" value="${proxy-host}" />
-                           <property name="proxy-port" value="${proxy-port}" />
-                           <property name="proxy-domain" value="${proxy-domain}" />
-                           <property name="proxy-username" value="${proxy-username}" />
-                           <property name="proxy-password" value="${proxy-password}" />
-                           <property name="proxy-workstation" value="${proxy-workstation}" />
-                           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth}" />
+                           <property name="as3-source-name" value="as3" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
                         <filters>
                            <filter property-type="Binary" min-value-size="1024K" />
                         </filters>
                      </value-storage>
-                     <value-storage id="ws3"
-                        class="org.exoplatform.services.jcr.impl.storage.value.fs.CASableTreeFileValueStorage">
+                     <value-storage id="ws3" class="org.exoplatform.services.jcr.impl.storage.value.fs.CASableTreeFileValueStorage">
                         <properties>
                            <property name="path" value="target/temp/values/ws3" />
                            <property name="digest-algo" value="MD5" />
-                           <property name="vcas-type"
-                              value="org.exoplatform.services.jcr.impl.storage.value.cas.JDBCValueContentAddressStorageImpl" />
+                           <property name="vcas-type" value="org.exoplatform.services.jcr.impl.storage.value.cas.JDBCValueContentAddressStorageImpl" />
                            <property name="jdbc-source-name" value="jdbcjcr" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
@@ -397,26 +314,7 @@
                         <properties>
                            <property name="key-prefix" value="wsdb2" />
                            <property name="bucket" value="${bucket}" />
-                           <property name="region" value="${region}" />
-                           <property name="access-key-id" value="${access-key-id}" />
-                           <property name="secret-access-key" value="${secret-access-key}" />
-                           <property name="connection-timeout" value="${connection-timeout}" />
-                           <property name="max-connections" value="${max-connections}" />
-                           <property name="max-error-retry" value="${max-error-retry}" />
-                           <property name="socket-timeout" value="${socket-timeout}" />
-                           <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint}" />
-                           <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint}" />
-                           <property name="local-address" value="${local-address}" />
-                           <property name="protocol" value="${protocol}" />
-                           <property name="signer-override" value="${signer-override}" />
-                           <property name="user-agent" value="${user-agent}" />
-                           <property name="proxy-host" value="${proxy-host}" />
-                           <property name="proxy-port" value="${proxy-port}" />
-                           <property name="proxy-domain" value="${proxy-domain}" />
-                           <property name="proxy-username" value="${proxy-username}" />
-                           <property name="proxy-password" value="${proxy-password}" />
-                           <property name="proxy-workstation" value="${proxy-workstation}" />
-                           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth}" />
+                           <property name="as3-source-name" value="as3" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
                         <filters>
@@ -474,28 +372,8 @@
                      <value-storage id="ws1"
                         class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
                         <properties>
-                           <property name="key-prefix" value="ws1db2" />
                            <property name="bucket" value="${bucket}" />
-                           <property name="region" value="${region}" />
-                           <property name="access-key-id" value="${access-key-id}" />
-                           <property name="secret-access-key" value="${secret-access-key}" />
-                           <property name="connection-timeout" value="${connection-timeout}" />
-                           <property name="max-connections" value="${max-connections}" />
-                           <property name="max-error-retry" value="${max-error-retry}" />
-                           <property name="socket-timeout" value="${socket-timeout}" />
-                           <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint}" />
-                           <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint}" />
-                           <property name="local-address" value="${local-address}" />
-                           <property name="protocol" value="${protocol}" />
-                           <property name="signer-override" value="${signer-override}" />
-                           <property name="user-agent" value="${user-agent}" />
-                           <property name="proxy-host" value="${proxy-host}" />
-                           <property name="proxy-port" value="${proxy-port}" />
-                           <property name="proxy-domain" value="${proxy-domain}" />
-                           <property name="proxy-username" value="${proxy-username}" />
-                           <property name="proxy-password" value="${proxy-password}" />
-                           <property name="proxy-workstation" value="${proxy-workstation}" />
-                           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth}" />
+                           <property name="as3-source-name" value="as3" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
                         <filters>
@@ -562,28 +440,8 @@
                      <value-storage id="ws"
                         class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
                         <properties>
-                           <property name="key-prefix" value="wstck" />
                            <property name="bucket" value="${bucket}" />
-                           <property name="region" value="${region}" />
-                           <property name="access-key-id" value="${access-key-id}" />
-                           <property name="secret-access-key" value="${secret-access-key}" />
-                           <property name="connection-timeout" value="${connection-timeout}" />
-                           <property name="max-connections" value="${max-connections}" />
-                           <property name="max-error-retry" value="${max-error-retry}" />
-                           <property name="socket-timeout" value="${socket-timeout}" />
-                           <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint}" />
-                           <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint}" />
-                           <property name="local-address" value="${local-address}" />
-                           <property name="protocol" value="${protocol}" />
-                           <property name="signer-override" value="${signer-override}" />
-                           <property name="user-agent" value="${user-agent}" />
-                           <property name="proxy-host" value="${proxy-host}" />
-                           <property name="proxy-port" value="${proxy-port}" />
-                           <property name="proxy-domain" value="${proxy-domain}" />
-                           <property name="proxy-username" value="${proxy-username}" />
-                           <property name="proxy-password" value="${proxy-password}" />
-                           <property name="proxy-workstation" value="${proxy-workstation}" />
-                           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth}" />
+                           <property name="as3-source-name" value="as3" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
                         <filters>
@@ -650,28 +508,8 @@
                      <value-storage id="ws1"
                         class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
                         <properties>
-                           <property name="key-prefix" value="ws1tck" />
                            <property name="bucket" value="${bucket}" />
-                           <property name="region" value="${region}" />
-                           <property name="access-key-id" value="${access-key-id}" />
-                           <property name="secret-access-key" value="${secret-access-key}" />
-                           <property name="connection-timeout" value="${connection-timeout}" />
-                           <property name="max-connections" value="${max-connections}" />
-                           <property name="max-error-retry" value="${max-error-retry}" />
-                           <property name="socket-timeout" value="${socket-timeout}" />
-                           <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint}" />
-                           <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint}" />
-                           <property name="local-address" value="${local-address}" />
-                           <property name="protocol" value="${protocol}" />
-                           <property name="signer-override" value="${signer-override}" />
-                           <property name="user-agent" value="${user-agent}" />
-                           <property name="proxy-host" value="${proxy-host}" />
-                           <property name="proxy-port" value="${proxy-port}" />
-                           <property name="proxy-domain" value="${proxy-domain}" />
-                           <property name="proxy-username" value="${proxy-username}" />
-                           <property name="proxy-password" value="${proxy-password}" />
-                           <property name="proxy-workstation" value="${proxy-workstation}" />
-                           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth}" />
+                           <property name="as3-source-name" value="as3" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
                         <filters>
@@ -737,28 +575,8 @@
                      <value-storage id="ws2"
                         class="org.exoplatform.services.jcr.impl.storage.value.s3.S3ValueStorage">
                         <properties>
-                           <property name="key-prefix" value="ws2tck" />
                            <property name="bucket" value="${bucket}" />
-                           <property name="region" value="${region}" />
-                           <property name="access-key-id" value="${access-key-id}" />
-                           <property name="secret-access-key" value="${secret-access-key}" />
-                           <property name="connection-timeout" value="${connection-timeout}" />
-                           <property name="max-connections" value="${max-connections}" />
-                           <property name="max-error-retry" value="${max-error-retry}" />
-                           <property name="socket-timeout" value="${socket-timeout}" />
-                           <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint}" />
-                           <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint}" />
-                           <property name="local-address" value="${local-address}" />
-                           <property name="protocol" value="${protocol}" />
-                           <property name="signer-override" value="${signer-override}" />
-                           <property name="user-agent" value="${user-agent}" />
-                           <property name="proxy-host" value="${proxy-host}" />
-                           <property name="proxy-port" value="${proxy-port}" />
-                           <property name="proxy-domain" value="${proxy-domain}" />
-                           <property name="proxy-username" value="${proxy-username}" />
-                           <property name="proxy-password" value="${proxy-password}" />
-                           <property name="proxy-workstation" value="${proxy-workstation}" />
-                           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth}" />
+                           <property name="as3-source-name" value="as3" />
                            <property name="enabled" value="${value-storage-enabled}" />
                         </properties>
                         <filters>

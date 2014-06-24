@@ -31,7 +31,7 @@
    <name>eXo JCR :: Component :: Core Service based on Amazon WS 1</name>
    <description>Implementation of Core Service based on Amazon WS 1 of Exoplatform SAS 'eXo JCR' project.</description>
    <properties>
-      <jcr.test.configuration.file>/conf/standalone/test-configuration-ijdbc-jbc.xml</jcr.test.configuration.file>
+      <jcr.test.configuration.file>/conf/standalone/test-configuration-ijdbc-s3.xml</jcr.test.configuration.file>
       <jbosscache.shareable>true</jbosscache.shareable>
       <cache.enabled>true</cache.enabled>
       <value.storage.enabled>true</value.storage.enabled>
@@ -779,28 +779,28 @@
       <profile>
          <id>sjdbc</id>
          <properties>
-            <jcr.test.configuration.file>/conf/standalone/test-configuration-sjdbc-jbc.xml</jcr.test.configuration.file>
+            <jcr.test.configuration.file>/conf/standalone/test-configuration-sjdbc-s3.xml</jcr.test.configuration.file>
             <properties.url.suffix>-sjdbc.properties</properties.url.suffix>
          </properties>
       </profile>
       <profile>
          <id>mjdbc</id>
          <properties>
-            <jcr.test.configuration.file>/conf/standalone/test-configuration-mjdbc-jbc.xml</jcr.test.configuration.file>
+            <jcr.test.configuration.file>/conf/standalone/test-configuration-mjdbc-s3.xml</jcr.test.configuration.file>
             <properties.url.suffix>.properties</properties.url.suffix>
          </properties>
       </profile>
       <profile>
          <id>ijdbc</id>
          <properties>
-            <jcr.test.configuration.file>/conf/standalone/test-configuration-ijdbc-jbc.xml</jcr.test.configuration.file>
+            <jcr.test.configuration.file>/conf/standalone/test-configuration-ijdbc-s3.xml</jcr.test.configuration.file>
             <properties.url.suffix>-sjdbc.properties</properties.url.suffix>
          </properties>
       </profile> 
       <profile>
          <id>cluster</id>
          <properties>
-            <jcr.test.configuration.file>/conf/standalone/cluster/test-configuration-ijdbc-jbc.xml</jcr.test.configuration.file>
+            <jcr.test.configuration.file>/conf/standalone/cluster/test-configuration-ijdbc-s3.xml</jcr.test.configuration.file>
          </properties>
       </profile>
       <profile>

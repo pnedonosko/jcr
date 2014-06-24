@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+
+    Copyright (C) 2009 eXo Platform SAS.
+
+    This is free software; you can redistribute it and/or modify it
+    under the terms of the GNU Lesser General Public License as
+    published by the Free Software Foundation; either version 2.1 of
+    the License, or (at your option) any later version.
+
+    This software is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+    Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public
+    License along with this software; if not, write to the Free
+    Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+    02110-1301 USA, or see the FSF site: http://www.fsf.org.
+
+-->
+<configuration
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd http://www.exoplatform.org/xml/ns/kernel_1_2.xsd"
+   xmlns="http://www.exoplatform.org/xml/ns/kernel_1_2.xsd">
+  
+  <external-component-plugins>
+    <target-component>org.exoplatform.services.naming.InitialContextInitializer</target-component>
+    <component-plugin>
+      <name>bind.datasource</name>
+      <set-method>addPlugin</set-method>
+      <type>org.exoplatform.services.naming.BindReferencePlugin</type>
+      <init-params>
+        <value-param>
+          <name>bind-name</name>
+          <value>as3</value>
+        </value-param>
+        <value-param>
+          <name>class-name</name>
+          <value>com.amazonaws.services.s3.AmazonS3</value>
+        </value-param>
+        <value-param>
+          <name>factory</name>
+          <value>org.exoplatform.connectors.s3.impl.adapter.AmazonS3ObjectFactory</value>
+        </value-param>
+        <properties-param>
+          <name>ref-addresses</name>
+          <description>ref-addresses</description>
+          <property name="access-key-id" value="${access-key-id}" />
+          <property name="secret-access-key" value="${secret-access-key}" />
+          <property name="region" value="${region:}" />
+          <property name="connection-timeout" value="${connection-timeout:}" />
+          <property name="max-connections" value="${max-connections:}" />
+          <property name="max-error-retry" value="${max-error-retry:}" />
+          <property name="socket-timeout" value="${socket-timeout:}" />
+          <property name="socket-send-buffer-size-hint" value="${socket-send-buffer-size-hint:}" />
+          <property name="socket-receive-buffer-size-hint" value="${socket-receive-buffer-size-hint:}" />
+          <property name="local-address" value="${local-address:}" />
+          <property name="protocol" value="${protocol:}" />
+          <property name="signer-override" value="${signer-override:}" />
+          <property name="user-agent" value="${user-agent:}" />
+          <property name="proxy-host" value="${proxy-host:}" />
+          <property name="proxy-port" value="${proxy-port:}" />
+          <property name="proxy-domain" value="${proxy-domain:}" />
+          <property name="proxy-username" value="${proxy-username:}" />
+          <property name="proxy-password" value="${proxy-password:}" />
+          <property name="proxy-workstation" value="${proxy-workstation:}" />
+          <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth:}" />
+        </properties-param>
+      </init-params>
+    </component-plugin>
+  </external-component-plugins>
+  <import>test-configuration-ijdbc-jbc.xml</import>
+</configuration>
