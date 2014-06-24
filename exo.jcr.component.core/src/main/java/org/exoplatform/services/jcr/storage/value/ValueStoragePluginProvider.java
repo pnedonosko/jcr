@@ -23,6 +23,7 @@ import org.exoplatform.services.jcr.impl.storage.value.ValueStorageNotFoundExcep
 import org.exoplatform.services.jcr.storage.WorkspaceStorageConnection;
 
 import java.io.IOException;
+import java.net.URL;
 
 /**
  * Created by The eXo Platform SAS 04.09.2006
@@ -58,6 +59,22 @@ public interface ValueStoragePluginProvider
     *           if no such storage found for storageId
     */
    ValueIOChannel getChannel(String storageId) throws IOException, ValueStorageNotFoundException;
+
+   /**
+    * Gives the {@link ValueStorageURLConnection} corresponding to the given <code>storageId</code>
+    * and <code>idResource</code>.
+    * @param storageId
+    *          String with storage Id (see configuration)
+    * @param url
+    *          the {@link URL} of the resource to which we want to access
+    * @return the {@link ValueStorageURLConnection} corresponding to this storageId
+    * @throws ValueStorageNotFoundException
+    *           if no such storage found for storageId
+    * @throws IOException
+    *           if an error occurs while creating the connection
+    */
+   ValueStorageURLConnection createURLConnection(String storageId, URL url) throws ValueStorageNotFoundException,
+      IOException;
 
    /**
     * Run consistency check operation on each plugin registered.

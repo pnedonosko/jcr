@@ -23,6 +23,7 @@ import org.exoplatform.services.jcr.impl.storage.value.ValueDataResourceHolder;
 import org.exoplatform.services.jcr.storage.WorkspaceStorageConnection;
 
 import java.io.IOException;
+import java.net.URL;
 import java.util.List;
 import java.util.Properties;
 
@@ -37,7 +38,11 @@ public abstract class ValueStoragePlugin
 {
    protected List<ValuePluginFilter> filters;
 
-   protected String id = null;
+   protected String id;
+
+   protected String repository;
+
+   protected String workspace;
 
    /**
     * Initialize this plugin. Used at start time.
@@ -107,6 +112,51 @@ public abstract class ValueStoragePlugin
       {
          this.id = id;
       }
+   }
+
+   /**
+    * Gives the name of the repository that owns the value storage
+    */
+   protected final String getRepository()
+   {
+      return repository;
+   }
+
+   /**
+    * Sets the name of the repository that owns the value storage
+    */
+   public final void setRepository(String repository)
+   {
+      if (this.repository == null)
+         this.repository = repository;
+   }
+
+   /**
+    * Gives the name of the workspace that owns the value storage
+    */
+   protected final String getWorkspace()
+   {
+      return workspace;
+   }
+
+   /**
+    * Sets the name of the workspace that owns the value storage
+    */
+   public final void setWorkspace(String workspace)
+   {
+      if (this.workspace == null)
+         this.workspace = workspace;
+   }
+
+   /**
+    * In case the value storage supports the {@link URL}, this method
+    * will provide the {@link ValueStorageURLConnection} managed by the value storage
+    * @throws IOException
+    *           if an error occurs while creating the connection
+    */
+   public ValueStorageURLConnection createURLConnection(URL u) throws IOException
+   {
+      throw new IOException("The value storage " + repository + "/" + workspace + "/" + id + " doesn't support URL");
    }
 
    /**

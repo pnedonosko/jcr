@@ -460,6 +460,11 @@
          <version>1.7.6</version>
       </dependency>
       <dependency>
+         <groupId>com.amazonaws</groupId>
+         <artifactId>aws-java-sdk</artifactId>
+         <version>1.7.13</version>
+      </dependency>
+      <dependency>
          <groupId>org.exoplatform.doc</groupId>
          <artifactId>doc-style</artifactId>
          <version>${org.exoplatform.doc.doc-style.version}</version>
@@ -530,6 +535,7 @@
   <modules>
     <module>exo.jcr.component.core</module>
     <module>exo.jcr.component.core.impl.infinispan.v5</module>
+    <module>exo.jcr.component.core.impl.amazonaws.v1</module>
     <module>exo.jcr.component.statistics</module>
     <module>exo.jcr.component.ext</module>
     <module>exo.jcr.component.ftp</module>
