@@ -121,6 +121,7 @@ import javax.transaction.TransactionManager;
  * @author <a href="anatoliy.bazko@exoplatform.org">Anatoliy Bazko</a>
  * @version $Id: ISPNCacheWorkspaceStorageCache.java 3514 2010-11-22 16:14:36Z nzamosenchuk $
  */
+@SuppressWarnings("unchecked")
 public class ISPNCacheWorkspaceStorageCache implements WorkspaceStorageCache, Backupable, Startable
 {
    private static final Log LOG = ExoLogger//NOSONAR
@@ -713,6 +714,31 @@ public class ISPNCacheWorkspaceStorageCache implements WorkspaceStorageCache, Ba
    public void remove(ItemData item)
    {
       removeItem(item);
+   }
+
+  /**
+   * {@inheritDoc}
+   */
+   public void remove(String identifier, ItemData item)
+   {
+      boolean inTransaction = cache.isTransactionActive();
+      try
+      {
+         if (!inTransaction)
+         {
+            cache.beginTransaction();
+         }
+         cache.setLocal(true);
+         cache.remove(new CacheId(getOwnerId(), identifier), item);
+      }
+      finally
+      {
+         cache.setLocal(false);
+         if (!inTransaction)
+         {
+            dedicatedTxCommit();
+         }
+      }
    }
 
    /**

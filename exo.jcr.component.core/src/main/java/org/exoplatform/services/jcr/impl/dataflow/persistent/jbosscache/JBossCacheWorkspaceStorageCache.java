@@ -902,6 +902,31 @@ public class JBossCacheWorkspaceStorageCache implements WorkspaceStorageCache, S
    /**
     * {@inheritDoc}
     */
+   public void remove(String identifier, ItemData item)
+   {
+      boolean inTransaction = cache.isTransactionActive();
+      try
+      {
+         if (!inTransaction)
+         {
+            cache.beginTransaction();
+         }
+         cache.setLocal(true);
+         cache.remove(makeItemFqn(identifier), ITEM_DATA, item);
+      }
+      finally
+      {
+         cache.setLocal(false);
+         if (!inTransaction)
+         {
+            dedicatedTxCommit();
+         }
+      }
+   }
+
+   /**
+    * {@inheritDoc}
+    */
    public void onSaveItems(final ItemStateChangesLog itemStates)
    {
       //  if something happen we will rollback changes 
@@ -1635,8 +1660,7 @@ public class JBossCacheWorkspaceStorageCache implements WorkspaceStorageCache, S
                ITEM_LIST, node);
             cache.addToList(makeChildListFqn(childNodesList, node.getParentIdentifier()), ITEM_LIST,
                node.getIdentifier(), modifyListsOfChild == ModifyChildOption.FORCE_MODIFY);
-
-            cache.removeNode(makeChildListFqn(childNodesByPageList, node.getParentIdentifier()));
+            cache.invalidateNode(makeChildListFqn(childNodesByPageList, node.getParentIdentifier()));
          }
       }
 
@@ -1795,7 +1819,7 @@ public class JBossCacheWorkspaceStorageCache implements WorkspaceStorageCache, S
                PATTERN_OBJ, ITEM_LIST, item);
 
             // remove from CHILD_NODES_BY_PAGE_LIST of parent
-            cache.removeNode(makeChildListFqn(childNodesByPageList, item.getParentIdentifier()));
+            cache.invalidateNode(makeChildListFqn(childNodesByPageList, item.getParentIdentifier()));
          }
 
          // remove from CHILD_NODES as parent
