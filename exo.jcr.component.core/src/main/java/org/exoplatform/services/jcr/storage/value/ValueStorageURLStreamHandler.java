@@ -85,9 +85,17 @@ public class ValueStorageURLStreamHandler extends URLStreamHandler
    }
 
    /**
-    * Creates a new instance of {@link ValueStorageURLConnection} from the
+    * <p>Creates a new instance of {@link ValueStorageURLConnection} from the
     * value storage that belongs to the provided <code>repository</code> and <code>workspace</code>
-    * and whose id is the provided <code>valueStorageId</code>
+    * and whose id is the provided <code>valueStorageId</code>.</p>
+    * <p><b>NB:</b> <i>For performance reason, this method should be overridden by
+    * sub classes. Indeed the default implementation will get {@link ValueStoragePluginProvider} 
+    * from the current context but in practice, sub classes should already have it.
+    * The default implementation only makes sense, when it will be called directly by 
+    * {@link ValueStorageURLStreamHandler#openConnection(URL)} which happens when
+    * we try to read the content of the target resource outside the context of the
+    * value storage.</i>
+    * </p>
     * @param u the {@link URL} of the resource
     * @param repository the name of the repository that owns the value storage
     * @param workspace the name of the workspace that owns the value storage

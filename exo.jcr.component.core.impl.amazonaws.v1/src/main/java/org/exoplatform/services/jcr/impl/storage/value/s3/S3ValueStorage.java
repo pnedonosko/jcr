@@ -23,17 +23,13 @@ import com.amazonaws.services.s3.AmazonS3;
 import org.exoplatform.services.jcr.config.RepositoryConfigurationException;
 import org.exoplatform.services.jcr.impl.storage.value.ValueDataResourceHolder;
 import org.exoplatform.services.jcr.impl.util.io.FileCleaner;
-import org.exoplatform.services.jcr.storage.WorkspaceStorageConnection;
 import org.exoplatform.services.jcr.storage.value.ValueIOChannel;
 import org.exoplatform.services.jcr.storage.value.ValueStoragePlugin;
-import org.exoplatform.services.jcr.storage.value.ValueStorageURLConnection;
 import org.exoplatform.services.jcr.storage.value.ValueStorageURLStreamHandler;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Properties;
 
 import javax.naming.InitialContext;
@@ -186,7 +182,6 @@ public class S3ValueStorage extends ValueStoragePlugin
       {
          throw new RepositoryConfigurationException("Could not check if the bucket exists or create it", e);
       }
-
    }
 
    /**
@@ -200,44 +195,8 @@ public class S3ValueStorage extends ValueStoragePlugin
    /**
     * {@inheritDoc}
     */
-   public void checkConsistency(WorkspaceStorageConnection dataConnection)
+   protected ValueStorageURLStreamHandler getURLStreamHandler()
    {
-   }
-
-   /**
-    * {@inheritDoc}
-    */
-   public boolean isSame(String storageId)
-   {
-      return getId().equals(storageId);
-   }
-
-   /**
-    * {@inheritDoc}
-    */
-   @Override
-   public ValueStorageURLConnection createURLConnection(URL u) throws IOException
-   {
-      return handler.createURLConnection(u, null, null, null);
-   }
-
-   /**
-    * Creates a new URL from the provided key based on the local
-    * {@link S3URLStreamHandler}
-    * @throws MalformedURLException If the URL could not be created
-    */
-   protected URL createURL(String key) throws MalformedURLException
-   {
-      StringBuilder url = new StringBuilder(64);
-      url.append(ValueStorageURLStreamHandler.PROTOCOL);
-      url.append(":/");
-      url.append(repository);
-      url.append('/');
-      url.append(workspace);
-      url.append('/');
-      url.append(id);
-      url.append('/');
-      url.append(key);
-      return new URL(null, url.toString(), handler);
+      return handler;
    }
 }

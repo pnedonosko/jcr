@@ -191,7 +191,14 @@ public class StreamPersistedValueData extends FilePersistedValueData
    {
       this.url = url;
 
-      this.tempFile = null;
+      // JCR-2326 Release the current ValueData from tempFile users before
+      // setting its reference to null so it will be garbage collected.
+      if (this.tempFile != null)
+      {
+         this.tempFile.release(this);
+         this.tempFile = null;
+      }
+
       this.stream = null;
    }
 
@@ -387,7 +394,7 @@ public class StreamPersistedValueData extends FilePersistedValueData
 
       // read canonical file path
       int size = in.readInt();
-      if (size >= 0)
+      if (size > 0)
       {
          byte[] buf = new byte[size];
          in.readFully(buf);
@@ -415,8 +422,9 @@ public class StreamPersistedValueData extends FilePersistedValueData
       }
       else
       {
-         // should not occurs
-         throw new IOException("readExternal: Persisted ValueData with null file found");
+         // should not occurs but since we have a way to recover, it should not be
+         // an issue
+         file = null;
       }
    }
 

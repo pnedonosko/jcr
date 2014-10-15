@@ -53,7 +53,7 @@ public interface ValueIOChannel
       throws IOException;
 
    /**
-    * Inspects whether corresponding file exists in value storage or not.
+    * Inspects whether corresponding resource exists in value storage or not.
     * 
     * @param propertyId 
     *          Property ID
@@ -65,7 +65,7 @@ public interface ValueIOChannel
    void checkValueData(String propertyId, int orderNumber) throws ValueDataNotFoundException, IOException;
 
    /**
-    * Repair value data by creation new corresponding empty file.
+    * Repairs the value data generally by setting the resource to an empty content.
     * 
     * @param propertyId 
     *          Property ID

@@ -22,9 +22,9 @@ import com.amazonaws.services.s3.AmazonS3;
 
 import org.exoplatform.services.jcr.datamodel.ValueData;
 import org.exoplatform.services.jcr.impl.dataflow.SpoolConfig;
-import org.exoplatform.services.jcr.impl.dataflow.persistent.StreamPersistedValueData;
 import org.exoplatform.services.jcr.impl.storage.value.ValueDataNotFoundException;
 import org.exoplatform.services.jcr.impl.storage.value.ValueOperation;
+import org.exoplatform.services.jcr.impl.storage.value.operations.ValueURLIOHelper;
 import org.exoplatform.services.jcr.impl.util.io.FileCleaner;
 import org.exoplatform.services.jcr.storage.value.ValueIOChannel;
 import org.exoplatform.services.log.ExoLogger;
@@ -32,7 +32,6 @@ import org.exoplatform.services.log.Log;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -499,34 +498,7 @@ public class S3ValueIOChannel implements ValueIOChannel
 
       private InputStream getContent() throws IOException
       {
-         if (value.isByteArray())
-         {
-            return new ByteArrayInputStream(value.getAsByteArray());
-         }
-         else if (value instanceof StreamPersistedValueData)
-         {
-            StreamPersistedValueData streamed = (StreamPersistedValueData)value;
-            if (!streamed.isPersisted())
-            {
-               InputStream stream;
-               // the Value not yet persisted, i.e. or in client stream or spooled to a temp file
-               File tempFile;
-               if ((tempFile = streamed.getTempFile()) != null)
-               {
-                  // it's spooled Value, try move its file to VS
-                  stream = new FileInputStream(tempFile);
-               }
-               else
-               {
-                  // not spooled, use client InputStream
-                  stream = streamed.getStream();
-               }
-               // link this Value to URL in VS
-               streamed.setPersistedURL(storage.createURL(key));
-               return stream;
-            }
-         }
-         return value.getAsStream();
+         return ValueURLIOHelper.getContent(storage, value, key);
       }
 
       /**
