@@ -80,13 +80,13 @@ public class S3ValueIOChannel implements ValueIOChannel
     */
    private final S3ValueStorage storage;
 
-   S3ValueIOChannel(S3ValueStorage storage, AmazonS3 as3, String bucket, String keyPrefix, FileCleaner cleaner)
+   S3ValueIOChannel(S3ValueStorage storage)
    {
       this.storage = storage;
-      this.as3 = as3;
-      this.bucket = bucket;
-      this.keyPrefix = keyPrefix;
-      this.cleaner = cleaner;
+      this.as3 = storage.getAs3();
+      this.bucket = storage.getBucket();
+      this.keyPrefix = storage.getKeyPrefix();
+      this.cleaner = storage.getCleaner();
    }
 
    /**

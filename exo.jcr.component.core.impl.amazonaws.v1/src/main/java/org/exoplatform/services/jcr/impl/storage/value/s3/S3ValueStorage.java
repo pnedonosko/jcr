@@ -78,13 +78,25 @@ public class S3ValueStorage extends ValueStoragePlugin
    }
 
    /**
+    * Constructor used for testing purpose
+    */
+   S3ValueStorage(AmazonS3 as3, String bucket, String keyPrefix, FileCleaner cleaner)
+   {
+      this.as3 = as3;
+      this.bucket = bucket;
+      this.keyPrefix = keyPrefix;
+      this.cleaner = cleaner;
+      this.handler = new S3URLStreamHandler(as3, bucket);
+   }
+
+   /**
     * {@inheritDoc}
     */
    @Override
    public void init(Properties props, ValueDataResourceHolder resources) throws RepositoryConfigurationException,
       IOException
    {
-      bucket = props.getProperty(BUCKET);
+      this.bucket = props.getProperty(BUCKET);
       String keyPrefix = props.getProperty(KEY_PREFIX);
       setKeyPrefix(keyPrefix == null || keyPrefix.isEmpty() ? getRepository() + "/" + getWorkspace() + "/" + getId()
          : keyPrefix);
@@ -92,14 +104,14 @@ public class S3ValueStorage extends ValueStoragePlugin
       try
       {
          InitialContext ctx = new InitialContext();
-         as3 = (AmazonS3)ctx.lookup(dataSourceName);
+         this.as3 = (AmazonS3)ctx.lookup(dataSourceName);
       }
       catch (NamingException e)
       {
          throw new RepositoryConfigurationException("Cannot access to the data source '" + dataSourceName + "'", e);
       }
       createBucketIfNeeded();
-      handler = new S3URLStreamHandler(as3, bucket);
+      this.handler = new S3URLStreamHandler(as3, bucket);
    }
 
    /**
@@ -189,7 +201,7 @@ public class S3ValueStorage extends ValueStoragePlugin
     */
    public ValueIOChannel openIOChannel() throws IOException
    {
-      return new S3ValueIOChannel(this, as3, bucket, keyPrefix, cleaner);
+      return new S3ValueIOChannel(this);
    }
 
    /**
@@ -198,5 +210,38 @@ public class S3ValueStorage extends ValueStoragePlugin
    protected ValueStorageURLStreamHandler getURLStreamHandler()
    {
       return handler;
+   }
+
+   /**
+    * Gives the name of the bucket
+    */
+   String getBucket()
+   {
+      return bucket;
+   }
+
+   /**
+    * Gives the {@link AmazonS3} instance allowing to communicate with Amazon S3's 
+    * infrastructure
+    */
+   AmazonS3 getAs3()
+   {
+      return as3;
+   }
+
+   /**
+    * Gives the key prefix to use
+    */
+   String getKeyPrefix()
+   {
+      return keyPrefix;
+   }
+
+   /**
+    * Gives the {@link FileCleaner} used by the {@link S3ValueStorage}
+    */
+   FileCleaner getCleaner()
+   {
+      return cleaner;
    }
 }

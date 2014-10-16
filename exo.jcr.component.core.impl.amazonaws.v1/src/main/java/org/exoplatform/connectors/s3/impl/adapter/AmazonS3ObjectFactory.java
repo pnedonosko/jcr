@@ -58,25 +58,32 @@ public class AmazonS3ObjectFactory implements ObjectFactory
     * establishing a connection before giving up and timing out. A value of 0
     * means infinity, and is not recommended.
     */
-   private final static String CONNECTION_TIMEOUT = "connection-timeout";
+   private static final String CONNECTION_TIMEOUT = "connection-timeout";
 
    /**
     * The maximum number of allowed open HTTP connections.
     */
-   private final static String MAX_CONNECTIONS = "max-connections";
+   private static final String MAX_CONNECTIONS = "max-connections";
+
+   /**
+    * The expiration time for a connection in the connection pool. When a
+    * connection is retrieved from the connection pool, this parameter is
+    * checked to see if the connection can be reused.
+    */
+   private static final String CONNECTION_TTL = "connection-ttl";
 
    /**
     * The maximum number of retry attempts for failed retryable requests
     * (ex: 5xx error responses from services).
     */
-   private final static String MAX_ERROR_RETRY = "max-error-retry";
+   private static final String MAX_ERROR_RETRY = "max-error-retry";
 
    /**
     * The amount of time to wait (in milliseconds) for data to be
     * transfered over an established, open connection before the connection
     * times out and is closed. A value of 0 means infinity, and isn't recommended.
     */
-   private final static String SOCKET_TIMEOUT = "socket-timeout";
+   private static final String SOCKET_TIMEOUT = "socket-timeout";
 
    /**
     *  The optional size hints (in bytes) for the low level TCP send and
@@ -110,13 +117,13 @@ public class AmazonS3ObjectFactory implements ObjectFactory
     * {@link AmazonS3ObjectFactory#SOCKET_SEND_BUFFER_SIZE_HINT}
     * {@link AmazonS3ObjectFactory#SOCKET_RECEIVE_BUFFER_SIZE_HINT}
     */
-   private final static String SOCKET_SEND_BUFFER_SIZE_HINT = "socket-send-buffer-size-hint";
-   private final static String SOCKET_RECEIVE_BUFFER_SIZE_HINT = "socket-receive-buffer-size-hint";
+   private static final String SOCKET_SEND_BUFFER_SIZE_HINT = "socket-send-buffer-size-hint";
+   private static final String SOCKET_RECEIVE_BUFFER_SIZE_HINT = "socket-receive-buffer-size-hint";
 
    /**
     * The optional local address the client will bind to.
     */
-   private final static String LOCAL_ADDRESS = "local-address";
+   private static final String LOCAL_ADDRESS = "local-address";
 
    /**
     * The protocol (i.e. HTTP or HTTPS) to use when connecting to Amazon
@@ -126,7 +133,7 @@ public class AmazonS3ObjectFactory implements ObjectFactory
     * security.
     * <p>
     */
-   private final static String PROTOCOL = "protocol";
+   private static final String PROTOCOL = "protocol";
 
    /**
     * The name of the signature algorithm to use for signing requests
@@ -150,67 +157,72 @@ public class AmazonS3ObjectFactory implements ObjectFactory
     * a {@code Signer} class implementing the chosen algorithm by the
     * {@code com.amazonaws.auth.SignerFactory} class.
     */
-   private final static String SIGNER_OVERRIDE = "signer-override";
+   private static final String SIGNER_OVERRIDE = "signer-override";
 
    /**
     * The HTTP user agent header to send with all requests.
     */
-   private final static String USER_AGENT = "user-agent";
+   private static final String USER_AGENT = "user-agent";
 
    /**
     * The optional proxy host the client will connect through.
     */
-   private final static String PROXY_HOST = "proxy-host";
+   private static final String PROXY_HOST = "proxy-host";
 
    /**
     * The optional proxy port the client will connect through.
     */
-   private final static String PROXY_PORT = "proxy-port";
+   private static final String PROXY_PORT = "proxy-port";
 
    /**
     * The optional Windows domain name for configuration an NTLM proxy.
     * If you aren't using a Windows NTLM proxy, you do not need to set this
     * field.
     */
-   private final static String PROXY_DOMAIN = "proxy-domain";
+   private static final String PROXY_DOMAIN = "proxy-domain";
 
    /**
     * The optional proxy user name to use if connecting through a proxy.
     */
-   private final static String PROXY_USERNAME = "proxy-username";
+   private static final String PROXY_USERNAME = "proxy-username";
 
    /**
     * The optional proxy password to use when connecting through a proxy.
     */
-   private final static String PROXY_PASSWORD = "proxy-password";
+   private static final String PROXY_PASSWORD = "proxy-password";
 
    /**
     * The optional Windows workstation name for configuring NTLM proxy
     * support. If you aren't using a Windows NTLM proxy, you do not need to set
     * this field.
     */
-   private final static String PROXY_WORKSTATION = "proxy-workstation";
+   private static final String PROXY_WORKSTATION = "proxy-workstation";
 
    /**
     * Indicates whether to attempt to authenticate preemptively against proxy servers
     * using basic authentication
     */
-   private final static String PREEMPTIVE_BASIC_PROXY_AUTH = "preemptive-basic-proxy-auth";
+   private static final String PREEMPTIVE_BASIC_PROXY_AUTH = "preemptive-basic-proxy-auth";
+
+   /**
+    * Indicates whether to use gzip compression when making HTTP requests.
+    */
+   private static final String USE_GZIP = "use-gzip";
 
    /**
     * The AWS access key.
     */
-   private final static String ACCESS_KEY_ID = "access-key-id";
+   private static final String ACCESS_KEY_ID = "access-key-id";
 
    /**
     * The AWS secret access key.
     */
-   private final static String SECRET_KEY = "secret-access-key";
+   private static final String SECRET_KEY = "secret-access-key";
 
    /**
     * The name of the region. It is an optional parameter.
     */
-   private final static String REGION = "region";
+   private static final String REGION = "region";
 
    /**
     * {@inheritDoc}
@@ -280,6 +292,12 @@ public class AmazonS3ObjectFactory implements ObjectFactory
          {
             LOG.debug("The parameter {} has been set to {}", CONNECTION_TIMEOUT, value);
             config.setConnectionTimeout(Integer.valueOf(value));
+         }
+         value = props.getProperty(CONNECTION_TTL);
+         if (value != null && !value.isEmpty())
+         {
+            LOG.debug("The parameter {} has been set to {}", CONNECTION_TTL, value);
+            config.setConnectionTTL(Long.valueOf(value));
          }
          value = props.getProperty(MAX_CONNECTIONS);
          if (value != null && !value.isEmpty())
@@ -379,6 +397,12 @@ public class AmazonS3ObjectFactory implements ObjectFactory
          {
             LOG.debug("The parameter {} has been set to {}", PREEMPTIVE_BASIC_PROXY_AUTH, value);
             config.setPreemptiveBasicProxyAuth(Boolean.valueOf(value));
+         }
+         value = props.getProperty(USE_GZIP);
+         if (value != null && !value.isEmpty())
+         {
+            LOG.debug("The parameter {} has been set to {}", USE_GZIP, value);
+            config.setUseGzip(Boolean.valueOf(value));
          }
          return config;
       }

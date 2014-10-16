@@ -50,6 +50,7 @@
           <property name="secret-access-key" value="${secret-access-key}" />
           <property name="region" value="${region:}" />
           <property name="connection-timeout" value="${connection-timeout:}" />
+          <property name="connection-ttl" value="${connection-ttl:}" />
           <property name="max-connections" value="${max-connections:}" />
           <property name="max-error-retry" value="${max-error-retry:}" />
           <property name="socket-timeout" value="${socket-timeout:}" />
@@ -66,6 +67,7 @@
           <property name="proxy-password" value="${proxy-password:}" />
           <property name="proxy-workstation" value="${proxy-workstation:}" />
           <property name="preemptive-basic-proxy-auth" value="${preemptive-basic-proxy-auth:}" />
+          <property name="use-gzip" value="${use-gzip:}" />
         </properties-param>
       </init-params>
     </component-plugin>

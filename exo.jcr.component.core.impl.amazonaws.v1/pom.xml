@@ -88,12 +88,17 @@
         <groupId>javax.resource</groupId>
         <artifactId>connector-api</artifactId>
         <scope>test</scope>
-      </dependency>        
-      <!-- TCK binaries and deps for repo stub, some eXo API test -->
+      </dependency>
+      <!-- Amazon AWS -->
       <dependency>
         <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk</artifactId>
+        <artifactId>aws-java-sdk-core</artifactId>
       </dependency>
+      <dependency>
+        <groupId>com.amazonaws</groupId>
+        <artifactId>aws-java-sdk-s3</artifactId>
+      </dependency>
+      <!-- TCK binaries and deps for repo stub, some eXo API test -->
       <dependency>
         <groupId>javax.resource</groupId>
         <artifactId>connector-api</artifactId>
