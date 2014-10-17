@@ -20,7 +20,10 @@ package org.exoplatform.connectors.s3.impl.adapter;
 
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.Protocol;
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.http.AmazonHttpClient;
+import com.amazonaws.http.PoolableAmazonHttpClient;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3Client;
@@ -51,7 +54,7 @@ import javax.naming.spi.ObjectFactory;
  */
 public class AmazonS3ObjectFactory implements ObjectFactory
 {
-   private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.AmazonS3ObjectFactory");
+   private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.s3.AmazonS3ObjectFactory");
 
    /**
     * The amount of time to wait (in milliseconds) when initially
@@ -64,6 +67,21 @@ public class AmazonS3ObjectFactory implements ObjectFactory
     * The maximum number of allowed open HTTP connections.
     */
    private final static String MAX_CONNECTIONS = "max-connections";
+
+   /**
+    * The time to live for open HTTP connections.
+    */
+   private final static String CONNECTION_TTL = "connection-time-to-live";
+
+   /**
+    * Enable connection reaper for open HTTP connections.
+    */
+   private final static String USER_REAPER = "use-connection-reaper";
+
+   /**
+    * The time to wait for a free HTTP connection in the pool.
+    */
+   private final static String POOL_CONNECTION_TIMEOUT = "connection-pool-timeout";
 
    /**
     * The maximum number of retry attempts for failed retryable requests
@@ -111,6 +129,7 @@ public class AmazonS3ObjectFactory implements ObjectFactory
     * {@link AmazonS3ObjectFactory#SOCKET_RECEIVE_BUFFER_SIZE_HINT}
     */
    private final static String SOCKET_SEND_BUFFER_SIZE_HINT = "socket-send-buffer-size-hint";
+
    private final static String SOCKET_RECEIVE_BUFFER_SIZE_HINT = "socket-receive-buffer-size-hint";
 
    /**
@@ -212,6 +231,26 @@ public class AmazonS3ObjectFactory implements ObjectFactory
     */
    private final static String REGION = "region";
 
+   private final static long POOL_CONNECTION_TIMEOUT_DEFAULT = 1000 * 120; // 2min
+
+   class S3Client extends AmazonS3Client
+   {
+
+      S3Client(AWSCredentials awsCredentials, ClientConfiguration clientConfiguration, AmazonHttpClient httpClient)
+      {
+         super(awsCredentials, clientConfiguration);
+         // override default client with ours
+         this.client = httpClient;
+      }
+
+      S3Client(ClientConfiguration clientConfiguration, AmazonHttpClient httpClient)
+      {
+         super(clientConfiguration);
+         // override default client with ours
+         this.client = httpClient;
+      }
+   }
+
    /**
     * {@inheritDoc}
     */
@@ -242,7 +281,8 @@ public class AmazonS3ObjectFactory implements ObjectFactory
       String accessKeyId = properties.getProperty(ACCESS_KEY_ID);
       String secretAccessKey = properties.getProperty(SECRET_KEY);
       ClientConfiguration config = createClientConfiguration(properties);
-      AmazonS3 as3 = createAmazonS3(config, accessKeyId, secretAccessKey);
+      AmazonHttpClient httpClient = createHttpClient(config, properties);
+      AmazonS3 as3 = createAmazonS3(httpClient, config, accessKeyId, secretAccessKey);
       String region = properties.getProperty(REGION);
       if (region != null && !region.isEmpty())
       {
@@ -268,6 +308,38 @@ public class AmazonS3ObjectFactory implements ObjectFactory
    }
 
    /**
+    * Creates a new instance of {@link AmazonHttpClient} according the provided properties
+    */
+   private AmazonHttpClient createHttpClient(ClientConfiguration config, Properties props)
+      throws RepositoryConfigurationException
+   {
+      String value = props.getProperty(POOL_CONNECTION_TIMEOUT);
+      long poolTimeout;
+      if (value != null && !value.isEmpty())
+      {
+         if (LOG.isDebugEnabled())
+         {
+            LOG.debug("The parameter {} has been set to {}", POOL_CONNECTION_TIMEOUT, value);
+         }
+         try
+         {
+            poolTimeout = Long.valueOf(value);
+         }
+         catch (NumberFormatException e)
+         {
+            LOG.error("Error parsing " + POOL_CONNECTION_TIMEOUT, e);
+            poolTimeout = POOL_CONNECTION_TIMEOUT_DEFAULT;
+         }
+      }
+      else
+      {
+         poolTimeout = POOL_CONNECTION_TIMEOUT_DEFAULT;
+      }
+
+      return new PoolableAmazonHttpClient(config, poolTimeout);
+   }
+
+   /**
     * Creates a new instance of {@link ClientConfiguration} according to what could be find in the provided properties
     */
    private ClientConfiguration createClientConfiguration(Properties props) throws RepositoryConfigurationException
@@ -286,6 +358,18 @@ public class AmazonS3ObjectFactory implements ObjectFactory
          {
             LOG.debug("The parameter {} has been set to {}", MAX_CONNECTIONS, value);
             config.setMaxConnections(Integer.valueOf(value));
+         }
+         value = props.getProperty(CONNECTION_TTL);
+         if (value != null && !value.isEmpty())
+         {
+            LOG.debug("The parameter {} has been set to {}", CONNECTION_TTL, value);
+            config.setConnectionTTL(Long.valueOf(value));
+         }
+         value = props.getProperty(USER_REAPER);
+         if (value != null && !value.isEmpty())
+         {
+            LOG.debug("The parameter {} has been set to {}", USER_REAPER, value);
+            config.setUseReaper(Boolean.valueOf(value));
          }
          value = props.getProperty(MAX_ERROR_RETRY);
          if (value != null && !value.isEmpty())
@@ -393,19 +477,19 @@ public class AmazonS3ObjectFactory implements ObjectFactory
     * key are both defined, it will be used for the authentication otherwise it will rely in the default credential
     * provider chain
     */
-   private AmazonS3 createAmazonS3(ClientConfiguration config, String accessKeyId, String secretAccessKey)
-      throws RepositoryConfigurationException
+   private AmazonS3 createAmazonS3(AmazonHttpClient httpClient, ClientConfiguration config, String accessKeyId,
+      String secretAccessKey) throws RepositoryConfigurationException
    {
       try
       {
          if (accessKeyId != null && !accessKeyId.isEmpty() && secretAccessKey != null && !secretAccessKey.isEmpty())
          {
             LOG.debug("The access key id and the secret access key have been configured so it will use it to connect to AS3");
-            return new AmazonS3Client(new BasicAWSCredentials(accessKeyId, secretAccessKey), config);
+            return new S3Client(new BasicAWSCredentials(accessKeyId, secretAccessKey), config, httpClient);
          }
          LOG.debug("No access key id and the secret access key have been configured so it will rely on the default credential "
             + "provider chain to connect to AS3");
-         return new AmazonS3Client(config);
+         return new S3Client(config, httpClient);
       }
       catch (Exception e)
       {
