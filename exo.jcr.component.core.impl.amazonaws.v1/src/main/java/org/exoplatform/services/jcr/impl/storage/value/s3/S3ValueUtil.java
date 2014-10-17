@@ -19,14 +19,20 @@
 package org.exoplatform.services.jcr.impl.storage.value.s3;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.AmazonWebServiceRequest;
+import com.amazonaws.event.ProgressListener;
 import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 
@@ -49,6 +55,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -60,9 +67,14 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class S3ValueUtil
 {
-   private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.S3ValueUtil");
+   private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.s3.S3ValueUtil");
 
    private static final AtomicLong SEQUENCE = new AtomicLong();
+
+   /**
+    * Current listeners of writes in progress.
+    */
+   private static final ConcurrentHashMap<String, S3Process> processes = new ConcurrentHashMap<String, S3Process>();
 
    private S3ValueUtil()
    {
@@ -77,8 +89,18 @@ public class S3ValueUtil
     */
    public static boolean delete(AmazonS3 as3, String bucket, String key)
    {
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("delete >>> " + bucket + " " + key);
+      }
+
       DeleteObjectsRequest request = new DeleteObjectsRequest(bucket);
       request.withKeys(key);
+
+      // respect the order of modifications, as the deleting value still can be in
+      // process of modification which depends on its size and network 
+      writeLock(bucket, key, request);
+
       try
       {
          DeleteObjectsResult result = as3.deleteObjects(request);
@@ -102,9 +124,22 @@ public class S3ValueUtil
     */
    public static List<String> delete(AmazonS3 as3, String bucket, String... keys)
    {
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("delete >>> " + bucket + " " + keys);
+      }
+
       List<String> result = null;
       DeleteObjectsRequest request = new DeleteObjectsRequest(bucket);
       request.withKeys(keys);
+
+      // respect the order of modifications, as the deleting values still can be in
+      // process of modification which depends on their size and network 
+      for (String key : keys)
+      {
+         writeLock(bucket, key, request);
+      }
+
       try
       {
          as3.deleteObjects(request);
@@ -135,9 +170,18 @@ public class S3ValueUtil
     */
    public static boolean exists(AmazonS3 as3, String bucket, String key)
    {
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("exists >>> " + bucket + " " + key);
+      }
+
+      GetObjectMetadataRequest request = new GetObjectMetadataRequest(bucket, key);
+
+      metadataLock(bucket, key, request);
+
       try
       {
-         return as3.getObjectMetadata(bucket, key) != null;
+         return as3.getObjectMetadata(request) != null;
       }
       catch (AmazonServiceException e)
       {
@@ -157,8 +201,25 @@ public class S3ValueUtil
     */
    public static List<String> getKeys(AmazonS3 as3, String bucket, String prefix)
    {
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("getKeys >>> " + bucket + " " + prefix);
+      }
+
+      ListObjectsRequest request = new ListObjectsRequest(bucket, prefix, null, null, null);
+
+      String vidp = vid(bucket, prefix);
+      for (String vid : processes.keySet())
+      {
+         if (vid.startsWith(vidp))
+         {
+            metadataLock(bucket, vid.substring(bucket.length()), request);
+         }
+      }
+
+      ObjectListing objectListing = as3.listObjects(request);
+
       List<String> result = new ArrayList<String>();
-      ObjectListing objectListing = as3.listObjects(bucket, prefix);
       List<S3ObjectSummary> summaries = objectListing.getObjectSummaries();
       do
       {
@@ -183,7 +244,19 @@ public class S3ValueUtil
     */
    public static void copy(AmazonS3 as3, String bucket, String sourceKey, String destinationKey)
    {
-      as3.copyObject(bucket, sourceKey, bucket, destinationKey);
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("copy >>> " + bucket + " " + sourceKey + " " + destinationKey);
+      }
+
+      CopyObjectRequest request = new CopyObjectRequest(bucket, sourceKey, bucket, destinationKey);
+
+      // respect the order of modifications, as the copying value still can be in
+      // process of modification which depends on its size and network 
+      readLock(bucket, sourceKey, request); // source for read
+      writeLock(bucket, destinationKey, request); // destination on write
+
+      as3.copyObject(request);
    }
 
    /**
@@ -197,9 +270,21 @@ public class S3ValueUtil
     */
    public static void writeValue(AmazonS3 as3, String bucket, String key, InputStream content) throws IOException
    {
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("writeValue >>> " + bucket + " " + key);
+      }
+
       ObjectMetadata metadata = new ObjectMetadata();
       metadata.setContentLength(content.available());
-      as3.putObject(bucket, key, content, metadata);
+      // TODO set content type,encoding,disposition if applicable
+      PutObjectRequest request = new PutObjectRequest(bucket, key, content, metadata);
+
+      // respect the order of creation and further modifications, as the writting values still can be in
+      // process of previous uploading which depends on their size and network 
+      writeLock(bucket, key, request);
+
+      as3.putObject(request);
    }
 
    /**
@@ -217,36 +302,50 @@ public class S3ValueUtil
    public static ValueData readValueData(AmazonS3 as3, String bucket, String key, int type, int orderNumber,
       SpoolConfig spoolConfig) throws IOException
    {
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("readValueData >>> " + bucket + " " + key);
+      }
+
       try
       {
-         S3Object object = as3.getObject(bucket, key);
+         GetObjectRequest request = new GetObjectRequest(bucket, key);
+
+         S3Process process = readLock(bucket, key, request);
+
+         S3Object object = as3.getObject(request);
+
+         process.addResource(object); // object will be closed on transfer completed
+
          long fileSize = object.getObjectMetadata().getContentLength();
 
          if (fileSize > spoolConfig.maxBufferSize)
          {
             SwapFile swapFile =
-               SwapFile.get(spoolConfig.tempDirectory,
-                  key.replace('/', '_') + "." + System.currentTimeMillis() + "_" + SEQUENCE.incrementAndGet(), spoolConfig.fileCleaner);
+               SwapFile.get(spoolConfig.tempDirectory, key.replace('/', '_') + "." + System.currentTimeMillis() + "_"
+                  + SEQUENCE.incrementAndGet(), spoolConfig.fileCleaner);
             if (!swapFile.isSpooled())
             {
                // spool S3 Value content into swap file
                try
                {
+                  InputStream is = object.getObjectContent();
                   FileOutputStream fout = new FileOutputStream(swapFile);
-                  ReadableByteChannel inch = Channels.newChannel(object.getObjectContent());
+                  ReadableByteChannel inch = Channels.newChannel(is);
                   try
                   {
                      FileChannel fch = fout.getChannel();
                      long actualSize = fch.transferFrom(inch, 0, fileSize);
 
                      if (fileSize != actualSize)
-                        throw new IOException("Actual S3 Value size (" + actualSize + ") and content-length (" + fileSize
-                           + ") differs. S3 key " + key);
+                        throw new IOException("Actual S3 Value size (" + actualSize + ") and content-length ("
+                           + fileSize + ") differs. S3 key " + key);
                   }
                   finally
                   {
                      inch.close();
                      fout.close();
+                     is.close(); // close S3 stream explicitly
                   }
                }
                finally
@@ -301,9 +400,18 @@ public class S3ValueUtil
     */
    public static long getContentLength(AmazonS3 as3, String bucket, String key)
    {
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("getContentLength >>> " + bucket + " " + key);
+      }
+
+      GetObjectMetadataRequest request = new GetObjectMetadataRequest(bucket, key);
+
+      metadataLock(bucket, key, request);
+
       try
       {
-         ObjectMetadata metadata = as3.getObjectMetadata(bucket, key);
+         ObjectMetadata metadata = as3.getObjectMetadata(request);
          return metadata.getContentLength();
       }
       catch (AmazonServiceException e)
@@ -328,10 +436,258 @@ public class S3ValueUtil
     */
    public static InputStream getContent(AmazonS3 as3, String bucket, String key, long start, long end)
    {
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("getContent >>> " + bucket + " " + key);
+      }
+
       GetObjectRequest request = new GetObjectRequest(bucket, key);
+
+      S3Process process = readLock(bucket, key, request);
+
       if (start > 0 && end > 0)
+      {
          request.setRange(start, end);
+      }
+
       S3Object object = as3.getObject(request);
+
+      // this object will be closed when its data transfer complete (via S3 listener)
+      process.addResource(object);
+
       return object.getObjectContent();
+   }
+
+   // ***** internals *****
+
+   static String vid(String bucket, String key)
+   {
+      return bucket + key;
+   }
+
+   static S3Process getProcess(String pid)
+   {
+      return processes.get(pid);
+   }
+
+   static boolean removeProcess(S3Process process)
+   {
+      return processes.remove(process.getId(), process);
+   }
+
+   static S3Process addProcess(S3Process process)
+   {
+      S3Process previous = processes.putIfAbsent(process.getId(), process);
+      if (previous != null && previous != process)
+      {
+         // wait for previous (e.g. placed during this method work) and add the created process exclusively 
+         synchronized (processes)
+         {
+            previous.waitRead(); // wait for previous write
+            return processes.put(process.getId(), process); // add new process
+         }
+      }
+
+      return previous;
+   }
+
+   /**
+    * Wait for value write completed for key, if it has a place, and place a new write lock for it. 
+    * Both locks will be added as listeners to given S3 request for cleanup on completion.
+    * 
+    * @param bucket {@link String} bucket name
+    * @param key {@link String} value key
+    * @param request {@link AmazonWebServiceRequest}
+    * @return {@link S3Process} write process created for the key
+    */
+   private static S3Process writeLock(String bucket, String key, AmazonWebServiceRequest request)
+   {
+      String vid = vid(bucket, key);
+      S3Process process = getProcess(vid);
+      if (process == null)
+      {
+         // write lock until the value will be modified or deleted 
+         if (LOG.isDebugEnabled())
+         {
+            LOG.debug(">>> writeLock new for " + vid);
+         }
+         process = new S3Process(vid);
+      }
+      else
+      {
+         // reuse existing process and unlock read to be able lock for write by this thread
+         if (LOG.isDebugEnabled())
+         {
+            LOG.debug(">>> writeLock wait for " + vid);
+         }
+      }
+
+      // wait for all writes and reads and place exclusive lock
+      process.lockWrite();
+
+      // process will be unlocked by S3 listener
+      setRequestListener(request, process);
+
+      // finally add to global processes
+      addProcess(process);
+
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("<<< writeLock acquired " + process.getId());
+      }
+      return process;
+   }
+
+   /**
+    * Wait for value write completed for key1, if it has a place, and place a new write lock for key2. 
+    * Both locks will be added as listeners to given S3 request for release on completion.
+    * If key1 and key2 differ it is a copy usecase. 
+    * 
+    * @param bucket {@link String} bucket name
+    * @param key1 {@link String} source key
+    * @param key2 {@link String} destination name
+    * @param request {@link AmazonWebServiceRequest}
+    * @return {@link S3Process} write process created for key2
+    */
+   @Deprecated
+   private static S3Process writeLock(String bucket, String key1, String key2, AmazonWebServiceRequest request)
+   {
+      S3Process process;
+      if (key1.equals(key2))
+      {
+         process = getProcess(vid(bucket, key1));
+         // TODO cleanup: existing.unlockRead();
+      }
+      else
+      {
+         // usecase of copy - we lock
+         process = readLock(bucket, key1, request);
+      }
+
+      if (process == null)
+      {
+         // write lock until the value will be modified or deleted 
+         if (LOG.isDebugEnabled())
+         {
+            LOG.debug(">>> writeLock new for " + vid(bucket, key2));
+         }
+         process = new S3Process(vid(bucket, key2));
+      }
+      else
+      {
+         // reuse existing process and unlock read to be able lock for write by this thread
+         if (LOG.isDebugEnabled())
+         {
+            LOG.debug(">>> writeLock existing for " + process.getId());
+         }
+      }
+
+      // wait for all writes and reads and place exclusive lock
+      process.lockWrite();
+
+      // process will be unlocked by S3 listener
+      setRequestListener(request, process);
+
+      // finally add to global processes
+      addProcess(process);
+
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("<<< writeLock acquired " + process.getId());
+      }
+      return process;
+   }
+
+   /**
+    * Wait for value write completed and place read lock for metadata of a value.
+    * 
+    * @param bucket {@link String} bucket name
+    * @param key {@link String} value key
+    * @param request {@link AmazonWebServiceRequest}
+    * @return {@link S3Process} process existing for key or <code>null</code>
+    */
+   private static S3Process metadataLock(String bucket, String key, AmazonWebServiceRequest request)
+   {
+      return readLock(bucket, key, request, true);
+   }
+
+   /**
+    * Wait for value write completed and place read lock for it.
+    * 
+    * @param bucket {@link String} bucket name
+    * @param key {@link String} value key
+    * @param request {@link AmazonWebServiceRequest}
+    * @return {@link S3Process} process existing for key or <code>null</code>
+    */
+   private static S3Process readLock(String bucket, String key, AmazonWebServiceRequest request)
+   {
+      return readLock(bucket, key, request, false);
+   }
+
+   /**
+   * Wait for value write completed and place read lock for it.
+   * 
+   * @param bucket {@link String} bucket name
+   * @param key {@link String} value key
+   * @param request {@link AmazonWebServiceRequest}
+   * @return {@link S3Process} process existing for key or <code>null</code>
+   */
+   private static S3Process readLock(String bucket, String key, AmazonWebServiceRequest request, boolean metadata)
+   {
+      String vid = vid(bucket, key);
+      S3Process process = getProcess(vid);
+      if (process != null)
+      {
+         // wait until the value will be fully written, see writeValue()
+         // process will be unlocked by S3 listener
+         if (LOG.isDebugEnabled())
+         {
+            LOG.debug(">>> readLock wait for " + vid);
+         }
+         process.lockRead(metadata);
+         setRequestListener(request, process);
+      }
+      else
+      {
+         // create new process and lock it for reading, then only (!) add it to the request and processes
+         if (LOG.isDebugEnabled())
+         {
+            LOG.debug(">>> readLock new for " + vid);
+         }
+         process = new S3Process(vid);
+         process.lockRead(metadata);
+         setRequestListener(request, process);
+         addProcess(process);
+      }
+      if (LOG.isDebugEnabled())
+      {
+         LOG.debug("<<< readLock acquired " + process.getId());
+      }
+      return process;
+   }
+
+   /**
+    * Set given {@link S3Process} as a progress listener of given S3 request. If the request already has a listener, 
+    * it will be replaced by given process chained to the original listener. 
+    * 
+    * @param request {@link AmazonWebServiceRequest}
+    * @param process {@link S3Process} 
+    */
+   private static void setRequestListener(AmazonWebServiceRequest request, S3Process process)
+   {
+      ProgressListener listener = request.getGeneralProgressListener();
+      if (listener != null && listener != ProgressListener.NOOP)
+      {
+         if (listener != process)
+         {
+            // this way we create a chain of process listeners for multi-object requests
+            process.setParent(listener);
+            request.setGeneralProgressListener(process);
+         }
+      }
+      else
+      {
+         request.setGeneralProgressListener(process);
+      }
    }
 }

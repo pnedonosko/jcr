@@ -48,7 +48,7 @@ import javax.naming.NamingException;
  */
 public class S3ValueStorage extends ValueStoragePlugin
 {
-   private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.S3ValueStorage");
+   private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.s3.S3ValueStorage");
 
    /**
     * The name of the bucket.

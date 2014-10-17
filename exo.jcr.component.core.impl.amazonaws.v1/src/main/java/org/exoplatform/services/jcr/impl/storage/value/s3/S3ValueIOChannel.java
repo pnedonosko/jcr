@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class S3ValueIOChannel implements ValueIOChannel
 {
-   private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.S3ValueIOChannel");
+   private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.s3.S3ValueIOChannel");
 
    private static final AtomicLong SEQUENCE = new AtomicLong();
 
@@ -522,6 +522,9 @@ public class S3ValueIOChannel implements ValueIOChannel
                   stream = streamed.getStream();
                }
                // link this Value to URL in VS
+               // TODO swap remote S3 file to local temp file?
+               // but consider for very large files swapping (>100..200MB), this may not give expected effect 
+               // due to long downloading and it will consume the disk
                streamed.setPersistedURL(storage.createURL(key));
                return stream;
             }

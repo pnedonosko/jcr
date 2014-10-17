@@ -92,7 +92,7 @@
       <!-- TCK binaries and deps for repo stub, some eXo API test -->
       <dependency>
         <groupId>com.amazonaws</groupId>
-        <artifactId>aws-java-sdk</artifactId>
+        <artifactId>aws-java-sdk-s3</artifactId>
       </dependency>
       <dependency>
         <groupId>javax.resource</groupId>

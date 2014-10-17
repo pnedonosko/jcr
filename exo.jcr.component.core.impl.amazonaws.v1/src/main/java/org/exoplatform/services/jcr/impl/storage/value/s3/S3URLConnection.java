@@ -22,6 +22,8 @@ import com.amazonaws.services.s3.AmazonS3;
 
 import org.exoplatform.commons.utils.SecurityHelper;
 import org.exoplatform.services.jcr.storage.value.ValueStorageURLConnection;
+import org.exoplatform.services.log.ExoLogger;
+import org.exoplatform.services.log.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,6 +41,8 @@ import java.security.PrivilegedExceptionAction;
  */
 class S3URLConnection extends ValueStorageURLConnection
 {
+   
+   private static final Log LOG = ExoLogger.getLogger("exo.jcr.component.core.S3URLConnection");
 
    /**
     * This value is used to know whether a value has been defined or node
@@ -167,6 +171,10 @@ class S3URLConnection extends ValueStorageURLConnection
                {
                   if (start > 0)
                   {
+                     if (LOG.isDebugEnabled())
+                     {
+                        LOG.debug("???? Read with skipping " + start);
+                     }
                      try
                      {
                         delegate = S3ValueUtil.getContent(as3, bucket, idResource, start, start + len);
@@ -194,27 +202,35 @@ class S3URLConnection extends ValueStorageURLConnection
                         delegate.close();
                         delegate = null;
                      }
-                  }
+                  } // TODO seems here we need else-block where we'll read w/o requested skipped
                   if (delegate == null)
                   {
                      delegate = S3ValueUtil.getContent(as3, bucket, idResource, -1, -1);
                   }
-                  int result = delegate.read(b, off, len);
-                  if (result != -1)
+                  try
                   {
-                     diff -= result;
-                     while (result < len)
+                     int result = delegate.read(b, off, len);
+                     if (result != -1)
                      {
-                        int delta = delegate.read(b, off + result, len - result);
-                        if (delta == -1)
+                        diff -= result;
+                        while (result < len)
                         {
-                           break;
+                           int delta = delegate.read(b, off + result, len - result);
+                           if (delta == -1)
+                           {
+                              break;
+                           }
+                           diff -= delta;
+                           result += delta;
                         }
-                        diff -= delta;
-                        result += delta;
                      }
+                     return result;
                   }
-                  return result;
+                  catch(IOException e)
+                  {
+                     LOG.error("Error reading S3 value from " + bucket + " " + idResource + ": " + e); // TODO cleanup
+                     throw e;
+                  }
                }
             });
 
