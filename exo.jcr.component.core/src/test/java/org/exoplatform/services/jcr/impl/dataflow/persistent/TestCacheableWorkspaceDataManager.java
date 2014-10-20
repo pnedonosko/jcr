@@ -298,12 +298,15 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       assertFalse(vals.isEmpty());
       assertTrue(vals.get(0) instanceof StreamPersistedValueData);
       StreamPersistedValueData fpvd = (StreamPersistedValueData)vals.get(0);
-      assertNotNull(fpvd.getFile());
+      assertTrue(fpvd.getFile() != null || fpvd.getUrl() != null);
       assertTrue(cwdm.getItemData(id) == pData);
 
       // Simulate cases where the file is null such as during a replication of StreamPersistedValueData with a spool file as file
       // on all other cluster nodes the spool file doesn't exist so file will be set to null
-      fpvd.setPersistedFile(null);
+      if (fpvd.getFile() != null)
+         fpvd.setPersistedFile(null);
+      else
+         fpvd.setPersistedURL(null);
 
       assertFalse(cwdm.getItemData(id) == pData);
       assertTrue(cwdm.getItemData(id) == cwdm.getCachedItemData(id));
@@ -334,12 +337,15 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       assertFalse(vals.isEmpty());
       assertTrue(vals.get(0) instanceof StreamPersistedValueData);
       StreamPersistedValueData fpvd = (StreamPersistedValueData)vals.get(0);
-      assertNotNull(fpvd.getFile());
+      assertTrue(fpvd.getFile() != null || fpvd.getUrl() != null);
       assertTrue(cwdm.getItemData(data.parentData(), qpeProp, ItemType.PROPERTY) == pData);
 
       // Simulate cases where the file is null such as during a replication of StreamPersistedValueData with a spool file as file
       // on all other cluster nodes the spool file doesn't exist so file will be set to null
-      fpvd.setPersistedFile(null);
+      if (fpvd.getFile() != null)
+         fpvd.setPersistedFile(null);
+      else
+         fpvd.setPersistedURL(null);
 
       assertFalse(cwdm.getItemData(data.parentData(), qpeProp, ItemType.PROPERTY) == pData);
       assertTrue(cwdm.getItemData(data.parentData(), qpeProp, ItemType.PROPERTY) == cwdm.getCachedItemData(
@@ -381,7 +387,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       assertFalse(vals.isEmpty());
       assertTrue(vals.get(0) instanceof StreamPersistedValueData);
       StreamPersistedValueData fpvd = (StreamPersistedValueData)vals.get(0);
-      assertNotNull(fpvd.getFile());
+      assertTrue(fpvd.getFile() != null || fpvd.getUrl() != null);
       PropertyData pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData()))
       {
@@ -395,7 +401,10 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
 
       // Simulate cases where the file is null such as during a replication of StreamPersistedValueData with a spool file as file
       // on all other cluster nodes the spool file doesn't exist so file will be set to null
-      fpvd.setPersistedFile(null);
+      if (fpvd.getFile() != null)
+         fpvd.setPersistedFile(null);
+      else
+         fpvd.setPersistedURL(null);
 
       pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData()))
@@ -466,7 +475,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       assertFalse(vals.isEmpty());
       assertTrue(vals.get(0) instanceof StreamPersistedValueData);
       StreamPersistedValueData fpvd = (StreamPersistedValueData)vals.get(0);
-      assertNotNull(fpvd.getFile());
+      assertTrue(fpvd.getFile() != null || fpvd.getUrl() != null);
       PropertyData pData2 = null;
       List<QPathEntryFilter> itemDataFilters =
          Collections.singletonList((QPathEntryFilter)new PatternQPathEntryFilter(new QPathEntry("*", "*", 0)));
@@ -482,7 +491,10 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
 
       // Simulate cases where the file is null such as during a replication of StreamPersistedValueData with a spool file as file
       // on all other cluster nodes the spool file doesn't exist so file will be set to null
-      fpvd.setPersistedFile(null);
+      if (fpvd.getFile() != null)
+         fpvd.setPersistedFile(null);
+      else
+         fpvd.setPersistedURL(null);
 
       pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData(), itemDataFilters))
@@ -555,7 +567,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       assertFalse(vals.isEmpty());
       assertTrue(vals.get(0) instanceof StreamPersistedValueData);
       StreamPersistedValueData fpvd = (StreamPersistedValueData)vals.get(0);
-      assertNotNull(fpvd.getFile());
+      assertTrue(fpvd.getFile() != null || fpvd.getUrl() != null);
       PropertyData pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData(), itemDataFilters))
       {
@@ -569,7 +581,10 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
 
       // Simulate cases where the file is null such as during a replication of StreamPersistedValueData with a spool file as file
       // on all other cluster nodes the spool file doesn't exist so file will be set to null
-      fpvd.setPersistedFile(null);
+      if (fpvd.getFile() != null)
+         fpvd.setPersistedFile(null);
+      else
+         fpvd.setPersistedURL(null);
 
       pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData(), itemDataFilters))
@@ -635,7 +650,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       assertFalse(vals.isEmpty());
       assertTrue(vals.get(0) instanceof StreamPersistedValueData);
       StreamPersistedValueData fpvd = (StreamPersistedValueData)vals.get(0);
-      assertNotNull(fpvd.getFile());
+      assertTrue(fpvd.getFile() != null || fpvd.getUrl() != null);
       PropertyData pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData(), itemDataFilters))
       {
@@ -649,7 +664,10 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
 
       // Simulate cases where the file is null such as during a replication of StreamPersistedValueData with a spool file as file
       // on all other cluster nodes the spool file doesn't exist so file will be set to null
-      fpvd.setPersistedFile(null);
+      if (fpvd.getFile() != null)
+         fpvd.setPersistedFile(null);
+      else
+         fpvd.setPersistedURL(null);
 
       pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData(), itemDataFilters))
