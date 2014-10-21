@@ -329,6 +329,8 @@ public class S3ValueIOChannel implements ValueIOChannel
             for (int i = 0, length = bckKeys.length; i < length; i++)
             {
                String key = bckKeys[i];
+               if (key == null)
+                  break;
                // As the files could be registered to the file cleaner 
                // to be removed in case of a move that failed
                // or in case of a WriteValue.rollback() that could not
@@ -457,7 +459,7 @@ public class S3ValueIOChannel implements ValueIOChannel
       public void rollback() throws IOException
       {
          File file = new S3File(bucket, key, as3);
-         if (file.exists() && !file.delete())
+         if (!file.delete())
          {
             cleaner.addFile(file);
          }
@@ -476,13 +478,8 @@ public class S3ValueIOChannel implements ValueIOChannel
        */
       public void prepare() throws IOException
       {
-         if (S3ValueUtil.exists(as3, bucket, key))
-         {
-            // The key still exists so either it is a key that could not be removed
-            // or it is a multi update use case, in both cases we will need
-            // to prevent the file cleaner to remove it
-            cleaner.removeFile(new S3File(bucket, key, as3));
-         }
+         // Prevent the file cleaner to remove it
+         cleaner.removeFile(new S3File(bucket, key, as3));
 
          try
          {

@@ -92,7 +92,15 @@ public class S3File extends File
    @Override
    public boolean exists()
    {
-      return S3ValueUtil.exists(as3, bucket, key);
+      try
+      {
+         return S3ValueUtil.exists(as3, bucket, key);
+      }
+      catch (Exception e)
+      {
+         // If we cannot know if it exists or not, we will assume that it doesn't exist
+         return false;
+      }
    }
 
    /**

@@ -98,8 +98,7 @@ public class S3ValueStorage extends ValueStoragePlugin
    {
       this.bucket = props.getProperty(BUCKET);
       String keyPrefix = props.getProperty(KEY_PREFIX);
-      setKeyPrefix(keyPrefix == null || keyPrefix.isEmpty() ? getRepository() + "/" + getWorkspace() + "/" + getId()
-         : keyPrefix);
+      setKeyPrefix(keyPrefix == null || keyPrefix.isEmpty() ? getRepository() + "/" + getWorkspace() : keyPrefix);
       String dataSourceName = props.getProperty(AS3_SOURCE_NAME);
       try
       {

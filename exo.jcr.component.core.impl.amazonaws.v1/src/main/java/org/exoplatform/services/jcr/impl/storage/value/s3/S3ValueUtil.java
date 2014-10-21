@@ -122,6 +122,7 @@ public class S3ValueUtil
       {
          LOG.warn("Could not delete the keys {} due to {} ", Arrays.toString(keys), e.getMessage());
          LOG.debug(e);
+         result = Arrays.asList(keys);
       }
       return result;
    }
