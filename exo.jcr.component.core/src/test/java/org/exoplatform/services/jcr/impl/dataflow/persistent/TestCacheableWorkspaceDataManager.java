@@ -306,7 +306,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       if (fpvd.getFile() != null)
          fpvd.setPersistedFile(null);
       else
-         fpvd.setPersistedURL(null);
+         fpvd.setPersistedURL(null, false);
 
       assertFalse(cwdm.getItemData(id) == pData);
       assertTrue(cwdm.getItemData(id) == cwdm.getCachedItemData(id));
@@ -345,7 +345,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       if (fpvd.getFile() != null)
          fpvd.setPersistedFile(null);
       else
-         fpvd.setPersistedURL(null);
+         fpvd.setPersistedURL(null, false);
 
       assertFalse(cwdm.getItemData(data.parentData(), qpeProp, ItemType.PROPERTY) == pData);
       assertTrue(cwdm.getItemData(data.parentData(), qpeProp, ItemType.PROPERTY) == cwdm.getCachedItemData(
@@ -404,7 +404,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       if (fpvd.getFile() != null)
          fpvd.setPersistedFile(null);
       else
-         fpvd.setPersistedURL(null);
+         fpvd.setPersistedURL(null, false);
 
       pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData()))
@@ -494,7 +494,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       if (fpvd.getFile() != null)
          fpvd.setPersistedFile(null);
       else
-         fpvd.setPersistedURL(null);
+         fpvd.setPersistedURL(null, false);
 
       pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData(), itemDataFilters))
@@ -584,7 +584,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       if (fpvd.getFile() != null)
          fpvd.setPersistedFile(null);
       else
-         fpvd.setPersistedURL(null);
+         fpvd.setPersistedURL(null, false);
 
       pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData(), itemDataFilters))
@@ -667,7 +667,7 @@ public class TestCacheableWorkspaceDataManager extends JcrImplBaseTest
       if (fpvd.getFile() != null)
          fpvd.setPersistedFile(null);
       else
-         fpvd.setPersistedURL(null);
+         fpvd.setPersistedURL(null, false);
 
       pData2 = null;
       for (PropertyData pd : cwdm.getChildPropertiesData(data.parentData(), itemDataFilters))
