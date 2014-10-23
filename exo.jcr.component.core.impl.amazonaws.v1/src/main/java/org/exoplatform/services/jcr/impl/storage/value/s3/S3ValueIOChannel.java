@@ -495,7 +495,7 @@ public class S3ValueIOChannel implements ValueIOChannel
 
       private InputStream getContent() throws IOException
       {
-         return ValueURLIOHelper.getContent(storage, value, key);
+         return ValueURLIOHelper.getContent(storage, value, key, true);
       }
 
       /**
