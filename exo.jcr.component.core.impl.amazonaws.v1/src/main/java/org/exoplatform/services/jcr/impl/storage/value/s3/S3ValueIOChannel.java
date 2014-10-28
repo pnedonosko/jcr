@@ -22,9 +22,9 @@ import com.amazonaws.services.s3.AmazonS3;
 
 import org.exoplatform.services.jcr.datamodel.ValueData;
 import org.exoplatform.services.jcr.impl.dataflow.SpoolConfig;
-import org.exoplatform.services.jcr.impl.dataflow.persistent.StreamPersistedValueData;
 import org.exoplatform.services.jcr.impl.storage.value.ValueDataNotFoundException;
 import org.exoplatform.services.jcr.impl.storage.value.ValueOperation;
+import org.exoplatform.services.jcr.impl.storage.value.operations.ValueURLIOHelper;
 import org.exoplatform.services.jcr.impl.util.io.FileCleaner;
 import org.exoplatform.services.jcr.storage.value.ValueIOChannel;
 import org.exoplatform.services.log.ExoLogger;
@@ -32,7 +32,6 @@ import org.exoplatform.services.log.Log;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -81,13 +80,13 @@ public class S3ValueIOChannel implements ValueIOChannel
     */
    private final S3ValueStorage storage;
 
-   S3ValueIOChannel(S3ValueStorage storage, AmazonS3 as3, String bucket, String keyPrefix, FileCleaner cleaner)
+   S3ValueIOChannel(S3ValueStorage storage)
    {
       this.storage = storage;
-      this.as3 = as3;
-      this.bucket = bucket;
-      this.keyPrefix = keyPrefix;
-      this.cleaner = cleaner;
+      this.as3 = storage.getAs3();
+      this.bucket = storage.getBucket();
+      this.keyPrefix = storage.getKeyPrefix();
+      this.cleaner = storage.getCleaner();
    }
 
    /**
@@ -330,6 +329,8 @@ public class S3ValueIOChannel implements ValueIOChannel
             for (int i = 0, length = bckKeys.length; i < length; i++)
             {
                String key = bckKeys[i];
+               if (key == null)
+                  break;
                // As the files could be registered to the file cleaner 
                // to be removed in case of a move that failed
                // or in case of a WriteValue.rollback() that could not
@@ -458,7 +459,7 @@ public class S3ValueIOChannel implements ValueIOChannel
       public void rollback() throws IOException
       {
          File file = new S3File(bucket, key, as3);
-         if (file.exists() && !file.delete())
+         if (!file.delete())
          {
             cleaner.addFile(file);
          }
@@ -477,13 +478,8 @@ public class S3ValueIOChannel implements ValueIOChannel
        */
       public void prepare() throws IOException
       {
-         if (S3ValueUtil.exists(as3, bucket, key))
-         {
-            // The key still exists so either it is a key that could not be removed
-            // or it is a multi update use case, in both cases we will need
-            // to prevent the file cleaner to remove it
-            cleaner.removeFile(new S3File(bucket, key, as3));
-         }
+         // Prevent the file cleaner to remove it
+         cleaner.removeFile(new S3File(bucket, key, as3));
 
          try
          {
@@ -499,34 +495,7 @@ public class S3ValueIOChannel implements ValueIOChannel
 
       private InputStream getContent() throws IOException
       {
-         if (value.isByteArray())
-         {
-            return new ByteArrayInputStream(value.getAsByteArray());
-         }
-         else if (value instanceof StreamPersistedValueData)
-         {
-            StreamPersistedValueData streamed = (StreamPersistedValueData)value;
-            if (!streamed.isPersisted())
-            {
-               InputStream stream;
-               // the Value not yet persisted, i.e. or in client stream or spooled to a temp file
-               File tempFile;
-               if ((tempFile = streamed.getTempFile()) != null)
-               {
-                  // it's spooled Value, try move its file to VS
-                  stream = new FileInputStream(tempFile);
-               }
-               else
-               {
-                  // not spooled, use client InputStream
-                  stream = streamed.getStream();
-               }
-               // link this Value to URL in VS
-               streamed.setPersistedURL(storage.createURL(key));
-               return stream;
-            }
-         }
-         return value.getAsStream();
+         return ValueURLIOHelper.getContent(storage, value, key, true);
       }
 
       /**

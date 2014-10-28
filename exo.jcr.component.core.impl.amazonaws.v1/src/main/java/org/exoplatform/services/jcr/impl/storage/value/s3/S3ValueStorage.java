@@ -23,17 +23,13 @@ import com.amazonaws.services.s3.AmazonS3;
 import org.exoplatform.services.jcr.config.RepositoryConfigurationException;
 import org.exoplatform.services.jcr.impl.storage.value.ValueDataResourceHolder;
 import org.exoplatform.services.jcr.impl.util.io.FileCleaner;
-import org.exoplatform.services.jcr.storage.WorkspaceStorageConnection;
 import org.exoplatform.services.jcr.storage.value.ValueIOChannel;
 import org.exoplatform.services.jcr.storage.value.ValueStoragePlugin;
-import org.exoplatform.services.jcr.storage.value.ValueStorageURLConnection;
 import org.exoplatform.services.jcr.storage.value.ValueStorageURLStreamHandler;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.Properties;
 
 import javax.naming.InitialContext;
@@ -82,28 +78,39 @@ public class S3ValueStorage extends ValueStoragePlugin
    }
 
    /**
+    * Constructor used for testing purpose
+    */
+   S3ValueStorage(AmazonS3 as3, String bucket, String keyPrefix, FileCleaner cleaner)
+   {
+      this.as3 = as3;
+      this.bucket = bucket;
+      this.keyPrefix = keyPrefix;
+      this.cleaner = cleaner;
+      this.handler = new S3URLStreamHandler(as3, bucket);
+   }
+
+   /**
     * {@inheritDoc}
     */
    @Override
    public void init(Properties props, ValueDataResourceHolder resources) throws RepositoryConfigurationException,
       IOException
    {
-      bucket = props.getProperty(BUCKET);
+      this.bucket = props.getProperty(BUCKET);
       String keyPrefix = props.getProperty(KEY_PREFIX);
-      setKeyPrefix(keyPrefix == null || keyPrefix.isEmpty() ? getRepository() + "/" + getWorkspace() + "/" + getId()
-         : keyPrefix);
+      setKeyPrefix(keyPrefix == null || keyPrefix.isEmpty() ? getRepository() + "/" + getWorkspace() : keyPrefix);
       String dataSourceName = props.getProperty(AS3_SOURCE_NAME);
       try
       {
          InitialContext ctx = new InitialContext();
-         as3 = (AmazonS3)ctx.lookup(dataSourceName);
+         this.as3 = (AmazonS3)ctx.lookup(dataSourceName);
       }
       catch (NamingException e)
       {
          throw new RepositoryConfigurationException("Cannot access to the data source '" + dataSourceName + "'", e);
       }
       createBucketIfNeeded();
-      handler = new S3URLStreamHandler(as3, bucket);
+      this.handler = new S3URLStreamHandler(as3, bucket);
    }
 
    /**
@@ -186,7 +193,6 @@ public class S3ValueStorage extends ValueStoragePlugin
       {
          throw new RepositoryConfigurationException("Could not check if the bucket exists or create it", e);
       }
-
    }
 
    /**
@@ -194,50 +200,47 @@ public class S3ValueStorage extends ValueStoragePlugin
     */
    public ValueIOChannel openIOChannel() throws IOException
    {
-      return new S3ValueIOChannel(this, as3, bucket, keyPrefix, cleaner);
+      return new S3ValueIOChannel(this);
    }
 
    /**
     * {@inheritDoc}
     */
-   public void checkConsistency(WorkspaceStorageConnection dataConnection)
+   protected ValueStorageURLStreamHandler getURLStreamHandler()
    {
+      return handler;
    }
 
    /**
-    * {@inheritDoc}
+    * Gives the name of the bucket
     */
-   public boolean isSame(String storageId)
+   String getBucket()
    {
-      return getId().equals(storageId);
+      return bucket;
    }
 
    /**
-    * {@inheritDoc}
+    * Gives the {@link AmazonS3} instance allowing to communicate with Amazon S3's 
+    * infrastructure
     */
-   @Override
-   public ValueStorageURLConnection createURLConnection(URL u) throws IOException
+   AmazonS3 getAs3()
    {
-      return handler.createURLConnection(u, null, null, null);
+      return as3;
    }
 
    /**
-    * Creates a new URL from the provided key based on the local
-    * {@link S3URLStreamHandler}
-    * @throws MalformedURLException If the URL could not be created
+    * Gives the key prefix to use
     */
-   protected URL createURL(String key) throws MalformedURLException
+   String getKeyPrefix()
    {
-      StringBuilder url = new StringBuilder(64);
-      url.append(ValueStorageURLStreamHandler.PROTOCOL);
-      url.append(":/");
-      url.append(repository);
-      url.append('/');
-      url.append(workspace);
-      url.append('/');
-      url.append(id);
-      url.append('/');
-      url.append(key);
-      return new URL(null, url.toString(), handler);
+      return keyPrefix;
+   }
+
+   /**
+    * Gives the {@link FileCleaner} used by the {@link S3ValueStorage}
+    */
+   FileCleaner getCleaner()
+   {
+      return cleaner;
    }
 }

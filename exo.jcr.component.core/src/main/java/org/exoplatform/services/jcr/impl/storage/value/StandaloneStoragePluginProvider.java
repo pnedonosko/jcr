@@ -66,12 +66,12 @@ public class StandaloneStoragePluginProvider extends ArrayList<ValueStoragePlugi
    private static Log log = ExoLogger.getLogger("exo.jcr.component.core.StandaloneStoragePluginProvider");
 
    /**
-    * Value storage enabling parameter. For interal usage only and testing purpose.
+    * Value storage enabling parameter. For internal usage only and testing purpose.
     */
    private static final String VALUE_STORAGE_ENABLED_PARAM = "enabled";
 
    /**
-    * ValueData resorces holder (Files etc). It's singleton feature.
+    * ValueData resources holder (Files etc). It's singleton feature.
     */
    private final ValueDataResourceHolder resorcesHolder;
 

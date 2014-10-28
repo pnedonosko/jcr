@@ -21,6 +21,7 @@ package org.exoplatform.services.jcr.impl.storage.value.s3;
 import com.amazonaws.services.s3.AmazonS3;
 
 import org.exoplatform.commons.utils.SecurityHelper;
+import org.exoplatform.services.jcr.impl.dataflow.SpoolConfig;
 import org.exoplatform.services.jcr.storage.value.ValueStorageURLConnection;
 
 import java.io.IOException;
@@ -65,9 +66,18 @@ class S3URLConnection extends ValueStorageURLConnection
     */
    S3URLConnection(AmazonS3 as3, String bucket, URL url)
    {
+      this(as3, bucket, null, url);
+   }
+
+   /**
+    * @param url
+    */
+   S3URLConnection(AmazonS3 as3, String bucket, String idResource, URL url)
+   {
       super(url);
       this.as3 = as3;
       this.bucket = bucket;
+      this.idResource = idResource;
    }
 
    /**
@@ -109,140 +119,120 @@ class S3URLConnection extends ValueStorageURLConnection
    {
       if (!connected)
          connect();
-      return new InputStream()
+      return new S3URLConnectionInputStream();
+   }
+
+   /**
+    * Class allowing to extract the content from AS3
+    */
+   private class S3URLConnectionInputStream extends InputStream
+   {
+      private long start;
+
+      private InputStream delegate;
+
+      private int diff;
+
+      @Override
+      public int read() throws IOException
       {
-         private long start;
-
-         private InputStream delegate;
-
-         private int diff;
-
-         @Override
-         public int read() throws IOException
+         return SecurityHelper.doPrivilegedIOExceptionAction(new PrivilegedExceptionAction<Integer>()
          {
-            return SecurityHelper.doPrivilegedIOExceptionAction(new PrivilegedExceptionAction<Integer>()
-            {
 
-               public Integer run() throws Exception
+            public Integer run() throws Exception
+            {
+               int result = getDelegate().read();
+               if (result != -1)
                {
-                  if (delegate == null)
-                  {
-                     delegate = S3ValueUtil.getContent(as3, bucket, idResource, -1, -1);
-                     if (start > 0)
-                     {
-                        delegate.skip(start);
-                     }
-                  }
-                  int result = delegate.read();
-                  if (result != -1)
-                  {
-                     diff--;
-                  }
-                  return result;
+                  diff--;
                }
-            });
-         }
+               return result;
+            }
+         });
+      }
 
-         /**
-          * @see java.io.InputStream#available()
-          */
-         @Override
-         public int available() throws IOException
-         {
-            int available = getContentLength();
-            available += diff;
-            return available <= 0 ? 0 : available;
-         }
+      /**
+       * @see java.io.InputStream#available()
+       */
+      @Override
+      public int available() throws IOException
+      {
+         int available = getContentLength();
+         available += diff;
+         return available <= 0 ? 0 : available;
+      }
 
-         /**
-          * @see java.io.InputStream#read(byte[], int, int)
-          */
-         @Override
-         public int read(final byte[] b, final int off, final int len) throws IOException
+      /**
+       * @see java.io.InputStream#read(byte[], int, int)
+       */
+      @Override
+      public int read(final byte[] b, final int off, final int len) throws IOException
+      {
+         return SecurityHelper.doPrivilegedIOExceptionAction(new PrivilegedExceptionAction<Integer>()
          {
-            return SecurityHelper.doPrivilegedIOExceptionAction(new PrivilegedExceptionAction<Integer>()
+
+            public Integer run() throws Exception
             {
-
-               public Integer run() throws Exception
+               InputStream delegate = getDelegate();
+               int result = delegate.read(b, off, len);
+               if (result != -1)
                {
-                  if (start > 0)
+                  diff -= result;
+                  while (result < len)
                   {
-                     try
+                     int delta = delegate.read(b, off + result, len - result);
+                     if (delta == -1)
                      {
-                        delegate = S3ValueUtil.getContent(as3, bucket, idResource, start, start + len);
-                        int result = delegate.read(b, off, len);
-                        if (result != -1)
-                        {
-                           start += result;
-                           diff -= result;
-                           while (result < len)
-                           {
-                              int delta = delegate.read(b, off + result, len - result);
-                              if (delta == -1)
-                              {
-                                 break;
-                              }
-                              start += delta;
-                              diff -= delta;
-                              result += delta;
-                           }
-                        }
-                        return result;
+                        break;
                      }
-                     finally
-                     {
-                        delegate.close();
-                        delegate = null;
-                     }
+                     diff -= delta;
+                     result += delta;
                   }
-                  if (delegate == null)
-                  {
-                     delegate = S3ValueUtil.getContent(as3, bucket, idResource, -1, -1);
-                  }
-                  int result = delegate.read(b, off, len);
-                  if (result != -1)
-                  {
-                     diff -= result;
-                     while (result < len)
-                     {
-                        int delta = delegate.read(b, off + result, len - result);
-                        if (delta == -1)
-                        {
-                           break;
-                        }
-                        diff -= delta;
-                        result += delta;
-                     }
-                  }
-                  return result;
                }
-            });
+               return result;
+            }
+         });
 
-         }
+      }
 
-         /**
-          * @see java.io.InputStream#skip(long)
-          */
-         @Override
-         public long skip(long n) throws IOException
+      /**
+       * @see java.io.InputStream#skip(long)
+       */
+      @Override
+      public long skip(long n) throws IOException
+      {
+         if (n <= 0)
+            return 0;
+         diff -= n;
+         return start = n;
+      }
+
+      /**
+       * @see java.io.InputStream#close()
+       */
+      @Override
+      public void close() throws IOException
+      {
+         if (delegate != null)
          {
-            if (n <= 0)
-               return 0;
-            diff -= n;
-            return start = n;
+            delegate.close();
          }
+      }
 
-         /**
-          * @see java.io.InputStream#close()
-          */
-         @Override
-         public void close() throws IOException
+      /**
+       * Gives the delegate InputStream, if it has not been set yet, it will first initialize it
+       */
+      private InputStream getDelegate() throws IOException
+      {
+         if (delegate == null)
          {
-            if (delegate != null)
+            delegate = S3ValueUtil.getContent(as3, bucket, idResource, SpoolConfig.getDefaultSpoolConfig());
+            if (start > 0)
             {
-               delegate.close();
+               delegate.skip(start);
             }
          }
-      };
+         return delegate;
+      }
    }
 }

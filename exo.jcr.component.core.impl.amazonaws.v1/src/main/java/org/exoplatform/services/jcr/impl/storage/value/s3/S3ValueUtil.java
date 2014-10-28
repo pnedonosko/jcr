@@ -22,7 +22,6 @@ import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsResult;
-import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException.DeleteError;
 import com.amazonaws.services.s3.model.ObjectListing;
@@ -39,6 +38,8 @@ import org.exoplatform.services.jcr.impl.util.io.SwapFile;
 import org.exoplatform.services.log.ExoLogger;
 import org.exoplatform.services.log.Log;
 
+import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -121,6 +122,7 @@ public class S3ValueUtil
       {
          LOG.warn("Could not delete the keys {} due to {} ", Arrays.toString(keys), e.getMessage());
          LOG.debug(e);
+         result = Arrays.asList(keys);
       }
       return result;
    }
@@ -227,32 +229,29 @@ public class S3ValueUtil
             SwapFile swapFile =
                SwapFile.get(spoolConfig.tempDirectory,
                   key.replace('/', '_') + "." + System.currentTimeMillis() + "_" + SEQUENCE.incrementAndGet(), spoolConfig.fileCleaner);
-            if (!swapFile.isSpooled())
+            // spool S3 Value content into swap file
+            try
             {
-               // spool S3 Value content into swap file
+               FileOutputStream fout = new FileOutputStream(swapFile);
+               ReadableByteChannel inch = Channels.newChannel(object.getObjectContent());
                try
                {
-                  FileOutputStream fout = new FileOutputStream(swapFile);
-                  ReadableByteChannel inch = Channels.newChannel(object.getObjectContent());
-                  try
-                  {
-                     FileChannel fch = fout.getChannel();
-                     long actualSize = fch.transferFrom(inch, 0, fileSize);
+                  FileChannel fch = fout.getChannel();
+                  long actualSize = fch.transferFrom(inch, 0, fileSize);
 
-                     if (fileSize != actualSize)
-                        throw new IOException("Actual S3 Value size (" + actualSize + ") and content-length (" + fileSize
-                           + ") differs. S3 key " + key);
-                  }
-                  finally
-                  {
-                     inch.close();
-                     fout.close();
-                  }
+                  if (fileSize != actualSize)
+                     throw new IOException("Actual S3 Value size (" + actualSize + ") and content-length (" + fileSize
+                        + ") differs. S3 key " + key);
                }
                finally
                {
-                  swapFile.spoolDone();
+                  inch.close();
+                  fout.close();
                }
+            }
+            finally
+            {
+               swapFile.spoolDone();
             }
 
             return new CleanableFilePersistedValueData(orderNumber, swapFile, spoolConfig);
@@ -320,18 +319,80 @@ public class S3ValueUtil
     * @param as3 the AS3 to use for the content retrieval
     * @param bucket the bucket in which we do the content retrieval
     * @param key the key of the resource for which we want the content
-    * @param start the start position in case we want to get a sub part of the content
-    * or -1 otherwise
-    * @param end the end position in case we want to get a sub part of the content
-    * or -1 otherwise
+    * @param spoolConfig the configuration for spooling
     * @return the content of the corresponding resource or a sub part of it
+    * @throws IOException if an error occurs
     */
-   public static InputStream getContent(AmazonS3 as3, String bucket, String key, long start, long end)
+   public static InputStream getContent(AmazonS3 as3, String bucket, String key, SpoolConfig spoolConfig) throws IOException
    {
-      GetObjectRequest request = new GetObjectRequest(bucket, key);
-      if (start > 0 && end > 0)
-         request.setRange(start, end);
-      S3Object object = as3.getObject(request);
-      return object.getObjectContent();
+      try
+      {
+         S3Object object = as3.getObject(bucket, key);
+         long fileSize = object.getObjectMetadata().getContentLength();
+
+         if (fileSize > spoolConfig.maxBufferSize)
+         {
+            SwapFile swapFile =
+               SwapFile.get(spoolConfig.tempDirectory,
+                  key.replace('/', '_') + "." + System.currentTimeMillis() + "_" + SEQUENCE.incrementAndGet(), spoolConfig.fileCleaner);
+            // spool S3 Value content into swap file
+            try
+            {
+               FileOutputStream fout = new FileOutputStream(swapFile);
+               ReadableByteChannel inch = Channels.newChannel(object.getObjectContent());
+               try
+               {
+                  FileChannel fch = fout.getChannel();
+                  long actualSize = fch.transferFrom(inch, 0, fileSize);
+
+                  if (fileSize != actualSize)
+                     throw new IOException("Actual S3 Value size (" + actualSize + ") and content-length (" + fileSize
+                        + ") differs. S3 key " + key);
+               }
+               finally
+               {
+                  inch.close();
+                  fout.close();
+               }
+            }
+            finally
+            {
+               swapFile.spoolDone();
+            }
+
+            return new FileInputStream(swapFile);
+         }
+         else
+         {
+            InputStream is = object.getObjectContent();
+            try
+            {
+               byte[] data = new byte[(int)fileSize];
+               byte[] buff =
+                  new byte[ValueFileIOHelper.IOBUFFER_SIZE > fileSize ? ValueFileIOHelper.IOBUFFER_SIZE : (int)fileSize];
+
+               int rpos = 0;
+               int read;
+
+               while ((read = is.read(buff)) >= 0)
+               {
+                  System.arraycopy(buff, 0, data, rpos, read);
+                  rpos += read;
+               }
+
+               return new ByteArrayInputStream(data);
+            }
+            finally
+            {
+               is.close();
+            }
+         }
+      }
+      catch (AmazonServiceException e)
+      {
+         if (e.getStatusCode() == 404)
+            throw new FileNotFoundException("Could not find the key " + key + ": " + e.getMessage());
+         throw e;
+      }
    }
 }
